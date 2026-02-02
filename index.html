@@ -1295,137 +1295,19 @@
         </div>
     </div>
 
-    <!-- Bmob SDK - 使用Bmob官方CDN和多个备用源 -->
-    <script>
-        // 尝试多个CDN源加载Bmob SDK
-        (function() {
-            const cdnSources = [
-                // Bmob官方CDN（最稳定）
-                'https://unpkg.com/hydrogen-js-sdk@2.3.0/dist/Bmob-min.js',
-                // 其他备用CDN
-                'https://cdn.jsdelivr.net/npm/hydrogen-js-sdk@2.3.0/dist/Bmob-min.js',
-                'https://cdn.bootcdn.net/ajax/libs/bmob/2.3.0/Bmob-min.js',
-                // 旧版SDK作为最后备份
-                'https://unpkg.com/bmob-sdk@2.3.0/dist/Bmob-min.js'
-            ];
-
-            let currentIndex = 0;
-            let loadTimeout;
-
-            function loadScript(src) {
-                return new Promise((resolve, reject) => {
-                    console.log(`🔄 尝试加载 Bmob SDK: ${src}`);
-                    const script = document.createElement('script');
-                    script.src = src;
-
-                    // 设置超时
-                    const timeout = setTimeout(() => {
-                        console.warn(`⏱️ 加载超时（10秒）: ${src}`);
-                        script.remove();
-                        reject(new Error('timeout'));
-                    }, 10000);
-
-                    script.onload = () => {
-                        clearTimeout(timeout);
-                        console.log(`✅ Bmob SDK 加载成功: ${src}`);
-                        resolve();
-                    };
-
-                    script.onerror = (error) => {
-                        clearTimeout(timeout);
-                        console.warn(`❌ Bmob SDK 加载失败: ${src}`, error);
-                        script.remove();
-                        reject(error);
-                    };
-
-                    document.head.appendChild(script);
-                });
-            }
-
-            function tryLoadNext() {
-                if (currentIndex >= cdnSources.length) {
-                    console.error('❌ 所有 Bmob SDK 源都加载失败，将使用本地模式');
-                    console.error('已尝试的CDN源:', cdnSources);
-                    window.bmobLoadFailed = true;
-                    return;
-                }
-
-                loadScript(cdnSources[currentIndex])
-                    .then(() => {
-                        window.bmobLoadSuccess = true;
-                        console.log('🎉 Bmob SDK 准备就绪');
-                    })
-                    .catch((error) => {
-                        currentIndex++;
-                        console.log(`⏭️ 切换到下一个源 (${currentIndex + 1}/${cdnSources.length})`);
-                        setTimeout(() => tryLoadNext(), 500); // 延迟500ms再尝试下一个
-                    });
-            }
-
-            tryLoadNext();
-        })();
-    </script>
-
     <script>
         // ==================== Bmob 配置 ====================
-        // 请在这里替换为你的 Bmob 应用密钥
         const BMOB_CONFIG = {
             applicationId: 'bf74cf79f2d2905308be9c301d9bc85a',
             restApiKey: '9511b279aa8120af6c878a9873892973'
         };
 
-        // 初始化 Bmob
-        function initBmob() {
-            try {
-                if (typeof Bmob !== 'undefined') {
-                    Bmob.initialize(BMOB_CONFIG.applicationId, BMOB_CONFIG.restApiKey);
-                    console.log('✅ Bmob 初始化成功');
-                    return true;
-                } else {
-                    console.warn('⚠️ Bmob SDK 未加载，将使用本地模式');
-                    return false;
-                }
-            } catch (error) {
-                console.error('❌ Bmob 初始化失败:', error);
-                return false;
-            }
-        }
-
-        // 等待 Bmob SDK 加载完成
-        function waitForBmob() {
-            return new Promise((resolve) => {
-                let attempts = 0;
-                const maxAttempts = 50; // 最多等待5秒
-
-                const checkInterval = setInterval(() => {
-                    attempts++;
-
-                    if (typeof Bmob !== 'undefined') {
-                        clearInterval(checkInterval);
-                        console.log('✅ Bmob SDK 已加载');
-                        initBmob();
-                        resolve(true);
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                        console.warn('⚠️ Bmob SDK 加载超时（5秒），将使用本地模式');
-                        resolve(false);
-                    }
-                }, 100);
-            });
-        }
-
         // 初始化应用（异步）
         async function initApp() {
-            console.log('🚀 应用启动...');
+            console.log('应用初始化...');
 
-            // 等待 Bmob SDK 加载
-            const bmobLoaded = await waitForBmob();
-
-            if (bmobLoaded) {
-                console.log('📡 将使用云端同步模式');
-            } else {
-                console.log('💾 将使用本地存储模式');
-            }
+            // 先从本地加载数据（立即显示）
+            loadFromLocal();
 
             // 继续原有的初始化流程
             init();
@@ -1552,13 +1434,13 @@
             localStorage.setItem('taijiUsers', JSON.stringify(usersList));
         }
 
-        function addUser(userName) {
+        function addUser(userName, password) {
             if (!usersList.find(u => u.name === userName)) {
                 usersList.push({
                     name: userName,
                     nickname: userName, // 昵称默认等于用户名
                     avatar: avatarList[Math.floor(Math.random() * avatarList.length)], // 随机头像
-                    password: '', // 默认无密码
+                    password: password, // 密码必填
                     phone: '',
                     email: '',
                     bio: '',
@@ -1579,39 +1461,51 @@
             document.getElementById('loginSection').classList.remove('active');
             document.getElementById('oldUserSection').classList.add('active');
 
+            // 尝试从localStorage读取记住的密码并自动填充
+            const oldUserNameInput = document.getElementById('oldUserName');
+            const oldUserPasswordInput = document.getElementById('oldUserPassword');
+            const oldUserRememberCheckbox = document.getElementById('oldUserRemember');
+
+            // 清空表单
+            oldUserNameInput.value = '';
+            oldUserPasswordInput.value = '';
+            oldUserRememberCheckbox.checked = false;
+
             const container = document.getElementById('oldUsersList');
             container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">加载中...</div>';
 
             // 尝试从云端加载数据
             try {
-                if (typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
                     const query = Bmob.Query('CheckinRecord');
                     query.limit(1000);
-                    const result = await query.find();
+                    const res = await query.find();
 
-                    const cloudRecords = result.map(item => ({
-                        user: item.get('user')
-                    }));
+                    if (res && res.length > 0) {
+                        const cloudRecords = res.map(item => ({
+                            user: item.user
+                        }));
 
-                    // 合并云端用户
-                    const cloudUsers = [...new Set(cloudRecords.map(r => r.user))];
-                    cloudUsers.forEach(userName => {
-                        if (!usersList.find(u => u.name === userName)) {
-                            usersList.push({
-                                name: userName,
-                                nickname: userName, // 昵称默认等于用户名
-                                avatar: avatarList[Math.floor(Math.random() * avatarList.length)], // 随机头像
-                                password: '', // 默认无密码
-                                phone: '',
-                                email: '',
-                                bio: '',
-                                role: 'user', // 云端导入的用户默认为普通用户
-                                lastLogin: '',
-                                createdAt: new Date().toISOString()
-                            });
-                        }
-                    });
-                    saveUsersList();
+                        // 合并云端用户
+                        const cloudUsers = [...new Set(cloudRecords.map(r => r.user))];
+                        cloudUsers.forEach(userName => {
+                            if (!usersList.find(u => u.name === userName)) {
+                                usersList.push({
+                                    name: userName,
+                                    nickname: userName,
+                                    avatar: avatarList[Math.floor(Math.random() * avatarList.length)],
+                                    password: '',
+                                    phone: '',
+                                    email: '',
+                                    bio: '',
+                                    role: 'user',
+                                    lastLogin: '',
+                                    createdAt: new Date().toISOString()
+                                });
+                            }
+                        });
+                        saveUsersList();
+                    }
                 }
             } catch (error) {
                 console.warn('加载云端用户失败:', error);
@@ -1659,8 +1553,31 @@
         // 新用户注册
         function registerNewUser() {
             const userName = document.getElementById('newUserName').value.trim();
+            const password = document.getElementById('newUserPassword').value;
+            const confirmPassword = document.getElementById('newUserPasswordConfirm').value;
+            const rememberPassword = document.getElementById('newUserRemember').checked;
+
+            // 验证用户名不为空
             if (!userName) {
-                alert('请输入你的名字');
+                alert('请输入用户名');
+                return;
+            }
+
+            // 验证密码不为空
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+
+            // 验证密码至少6位
+            if (password.length < 6) {
+                alert('密码至少需要6位');
+                return;
+            }
+
+            // 验证两次密码一致
+            if (password !== confirmPassword) {
+                alert('两次输入的密码不一致');
                 return;
             }
 
@@ -1670,36 +1587,89 @@
                 return;
             }
 
+            // 如果勾选"记住密码"，保存到localStorage
+            if (rememberPassword) {
+                localStorage.setItem(`savedPassword_${userName}`, password);
+            }
+
+            // 创建用户
             currentUser = userName;
             localStorage.setItem('currentUser', userName);
-            addUser(userName);
+            addUser(userName, password);
+            showApp();
+        }
+
+        // 用户登录
+        function loginUser() {
+            const userName = document.getElementById('oldUserName').value.trim();
+            const password = document.getElementById('oldUserPassword').value;
+            const rememberPassword = document.getElementById('oldUserRemember').checked;
+
+            // 验证用户名和密码不为空
+            if (!userName) {
+                alert('请输入用户名');
+                return;
+            }
+
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+
+            // 检查用户是否存在
+            const user = usersList.find(u => u.name === userName);
+            if (!user) {
+                alert('用户不存在，请先注册');
+                return;
+            }
+
+            // 验证密码是否正确
+            if (password !== user.password) {
+                alert('密码错误，请重试');
+                return;
+            }
+
+            // 如果勾选"记住密码"，保存密码；否则清除保存的密码
+            if (rememberPassword) {
+                localStorage.setItem(`savedPassword_${userName}`, password);
+            } else {
+                localStorage.removeItem(`savedPassword_${userName}`);
+            }
+
+            // 登录成功
+            currentUser = userName;
+            localStorage.setItem('currentUser', userName);
+
+            // 更新最后登录时间
+            user.lastLogin = new Date().toISOString();
+            saveUsersList();
+
             showApp();
         }
 
         function quickLogin(userName) {
             const user = usersList.find(u => u.name === userName);
 
-            // 检查用户是否设置了密码
-            if (user && user.password) {
-                // 需要密码验证
-                window.pendingLoginUser = userName;
-                document.getElementById('passwordUserLabel').textContent = `${user.nickname || userName} 需要密码登录`;
-                document.getElementById('loginPassword').value = '';
-                document.getElementById('passwordModal').classList.add('active');
+            // 填充用户名到输入框
+            document.getElementById('oldUserName').value = userName;
+
+            // 尝试读取记住的密码并自动填充
+            const savedPassword = localStorage.getItem(`savedPassword_${userName}`);
+            const oldUserPasswordInput = document.getElementById('oldUserPassword');
+            const oldUserRememberCheckbox = document.getElementById('oldUserRemember');
+
+            if (savedPassword) {
+                // 如果有记住的密码，自动填充
+                oldUserPasswordInput.value = savedPassword;
+                oldUserRememberCheckbox.checked = true;
             } else {
-                // 无需密码，直接登录
-                currentUser = userName;
-                localStorage.setItem('currentUser', userName);
-                addUser(userName); // 确保添加到本地列表
-
-                // 更新最后登录时间
-                if (user) {
-                    user.lastLogin = new Date().toISOString();
-                    saveUsersList();
-                }
-
-                showApp();
+                // 没有记住的密码，清空密码框
+                oldUserPasswordInput.value = '';
+                oldUserRememberCheckbox.checked = false;
             }
+
+            // 聚焦密码输入框，方便用户输入或确认
+            oldUserPasswordInput.focus();
         }
 
         // 关闭密码验证模态框
@@ -1789,6 +1759,33 @@
             }
         }
 
+        // 清空所有数据
+        function clearAllData() {
+            // 二次确认
+            if (!confirm('⚠️ 警告：此操作将删除所有本地数据！\n\n包括：\n• 所有用户信息\n• 所有打卡记录\n• 所有记住的密码\n\n此操作不可恢复，确定要继续吗？')) {
+                return;
+            }
+
+            // 再次确认
+            if (!confirm('真的确定要清空所有数据吗？\n\n这是最后一次确认机会！')) {
+                return;
+            }
+
+            try {
+                // 清空localStorage中的所有数据
+                localStorage.clear();
+
+                // 提示用户
+                alert('✅ 所有本地数据已清空\n\n页面即将刷新...');
+
+                // 刷新页面
+                window.location.reload();
+            } catch (error) {
+                console.error('清空数据失败:', error);
+                alert('❌ 清空数据失败，请重试');
+            }
+        }
+
         // ==================== 显示应用 ====================
         // 获取用户显示名称（优先显示昵称）
         function getUserDisplayName(userName) {
@@ -1837,53 +1834,57 @@
         // 加载记录
         async function loadRecords() {
             try {
-                // 检查Bmob是否可用
-                if (typeof Bmob === 'undefined') {
-                    console.warn('Bmob不可用，从本地加载数据');
-                    updateCloudStatus('❌ Bmob SDK 未加载', 'Bmob SDK 未正确加载，只能使用本地数据。', 'error');
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                    console.log('正在从云端加载数据...');
+                    updateCloudStatus('⏳ 加载中', '正在从云端加载数据...', 'loading');
+
+                    // 从 Bmob 加载
+                    const query = Bmob.Query('CheckinRecord');
+                    query.limit(1000); // 加载最多1000条
+                    const res = await query.find();
+
+                    if (res && res.length > 0) {
+                        records = res.map(item => ({
+                            id: item.objectId,
+                            user: item.user,
+                            date: item.date,
+                            count16: item.count16 || 0,
+                            count64: item.count64 || 0,
+                            duration: item.duration || 0,
+                            points: item.points || 0,
+                            isSupplementary: item.isSupplementary || false,
+                            timestamp: item.timestamp || new Date(item.createdAt).getTime()
+                        }));
+
+                        console.log(`从云端加载了 ${records.length} 条打卡记录`);
+
+                        // 显示所有用户
+                        const allUsers = [...new Set(records.map(r => r.user))];
+                        console.log('云端数据包含的用户:', allUsers);
+
+                        // 更新云端状态显示
+                        updateCloudStatus(
+                            '✅ 云端同步成功',
+                            `共加载 ${records.length} 条打卡记录<br>` +
+                            `包含 ${allUsers.length} 个用户: ${allUsers.join(', ')}`,
+                            'success'
+                        );
+
+                        // 从云端记录中同步用户
+                        syncUsersFromRecords();
+
+                        // 同步到本地
+                        saveToLocal();
+                    } else {
+                        console.log('云端暂无数据');
+                        updateCloudStatus('✅ 云端已连接', '云端暂无数据', 'success');
+                        loadFromLocal();
+                    }
+                } else {
+                    console.warn('Bmob 不可用，从本地加载数据');
                     loadFromLocal();
-                    updateUI();
-                    return;
                 }
 
-                console.log('正在从云端加载数据...');
-                updateCloudStatus('⏳ 加载中', '正在从云端加载数据...', 'loading');
-
-                const query = Bmob.Query('CheckinRecord');
-                query.limit(1000);
-                const result = await query.find();
-
-                console.log(`从云端加载了 ${result.length} 条打卡记录`);
-
-                records = result.map(item => ({
-                    id: item.objectId,
-                    user: item.get('user'),
-                    date: item.get('date'),
-                    count16: item.get('count16'),
-                    count64: item.get('count64'),
-                    duration: item.get('duration'),
-                    points: item.get('points'),
-                    isSupplementary: item.get('isSupplementary') || false,
-                    timestamp: new Date(item.createdAt).getTime()
-                }));
-
-                // 显示所有用户
-                const allUsers = [...new Set(records.map(r => r.user))];
-                console.log('云端数据包含的用户:', allUsers);
-
-                // 更新云端状态显示
-                updateCloudStatus(
-                    '✅ 云端同步成功',
-                    `共加载 ${result.length} 条打卡记录<br>` +
-                    `包含 ${allUsers.length} 个用户: ${allUsers.join(', ')}`,
-                    'success'
-                );
-
-                // 从云端记录中同步用户
-                syncUsersFromRecords();
-
-                // 同步到本地
-                saveToLocal();
                 updateUI();
             } catch (error) {
                 console.error('加载数据失败:', error);
@@ -2018,27 +2019,39 @@
             };
 
             try {
-                // 检查Bmob是否可用
-                if (typeof Bmob !== 'undefined') {
-                    const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                    const record = new CheckinRecord();
-
-                    record.set('user', currentUser);
-                    record.set('date', today);
-                    record.set('count16', counts[16]);
-                    record.set('count64', counts[64]);
-                    record.set('duration', duration);
-                    record.set('points', totalPoints);
-                    record.set('isSupplementary', false);
-
-                    await record.save();
-                    localRecord.id = record.objectId;
-                    console.log('数据已保存到云端');
-                }
-
-                // 添加到本地记录
+                // 保存到本地
                 records.push(localRecord);
                 saveToLocal();
+
+                // 保存到云端
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                    try {
+                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
+                        const record = new CheckinRecord();
+                        record.set('user', localRecord.user);
+                        record.set('date', localRecord.date);
+                        record.set('count16', localRecord.count16);
+                        record.set('count64', localRecord.count64);
+                        record.set('duration', localRecord.duration);
+                        record.set('points', localRecord.points);
+                        record.set('isSupplementary', localRecord.isSupplementary);
+                        record.set('timestamp', localRecord.timestamp);
+
+                        const res = await record.save();
+
+                        // 更新本地记录的 ID
+                        localRecord.id = res.objectId;
+                        const index = records.findIndex(r => r === localRecord);
+                        if (index !== -1) {
+                            records[index] = localRecord;
+                            saveToLocal();
+                        }
+
+                        console.log('✅ 已同步到云端');
+                    } catch (error) {
+                        console.error('云端同步失败:', error);
+                    }
+                }
 
                 // 重置表单
                 counts = { 16: 0, 64: 0 };
@@ -2052,20 +2065,7 @@
                 alert('打卡成功！✓');
                 updateUI();
             } catch (error) {
-                console.error('提交失败:', error);
-                // 即使云端失败也保存到本地
-                records.push(localRecord);
-                saveToLocal();
-
-                // 重置表单
-                counts = { 16: 0, 64: 0 };
-                currentDuration = 0;
-                document.getElementById('count16').textContent = '0';
-                document.getElementById('count64').textContent = '0';
-                document.getElementById('durationDisplay').textContent = '0';
-                updatePracticeItemStyle(16, 0);
-                updatePracticeItemStyle(64, 0);
-
+                console.error('保存失败:', error);
                 alert('打卡成功！✓（已保存到本地）');
                 updateUI();
             }
@@ -2082,24 +2082,27 @@
             }
 
             try {
-                if (typeof Bmob !== 'undefined') {
-                    const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                    const query = new Bmob.Query(CheckinRecord);
-                    const obj = await query.get(id);
-                    await obj.destroy();
-                }
-
                 // 从本地删除
                 records = records.filter(r => r.id !== id);
                 saveToLocal();
+
+                // 从云端删除
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                    try {
+                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
+                        const record = new CheckinRecord();
+                        record.id = id;
+                        await record.destroy();
+                        console.log('✅ 已从云端删除');
+                    } catch (error) {
+                        console.error('云端删除失败:', error);
+                    }
+                }
 
                 alert('删除成功');
                 updateUI();
             } catch (error) {
                 console.error('删除失败:', error);
-                // 即使云端删除失败，也从本地删除
-                records = records.filter(r => r.id !== id);
-                saveToLocal();
                 alert('删除成功（本地）');
                 updateUI();
             }
@@ -2150,21 +2153,6 @@
             const totalPoints = editCounts[16] * 1 + editCounts[64] * 4;
 
             try {
-                // 尝试云端保存
-                if (typeof Bmob !== 'undefined') {
-                    const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                    const query = new Bmob.Query(CheckinRecord);
-                    const obj = await query.get(editingRecordId);
-
-                    obj.set('count16', editCounts[16]);
-                    obj.set('count64', editCounts[64]);
-                    obj.set('duration', duration);
-                    obj.set('points', totalPoints);
-
-                    await obj.save();
-                    console.log('编辑数据已保存到云端');
-                }
-
                 // 更新本地记录
                 const record = records.find(r => r.id === editingRecordId);
                 if (record) {
@@ -2175,25 +2163,31 @@
                     saveToLocal();
                 }
 
+                // 更新云端
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                    try {
+                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
+                        const bmobRecord = new CheckinRecord();
+                        bmobRecord.id = editingRecordId;
+                        bmobRecord.set('count16', editCounts[16]);
+                        bmobRecord.set('count64', editCounts[64]);
+                        bmobRecord.set('duration', duration);
+                        bmobRecord.set('points', totalPoints);
+                        await bmobRecord.save();
+                        console.log('✅ 编辑数据已同步到云端');
+                    } catch (error) {
+                        console.error('云端更新失败:', error);
+                    }
+                }
+
                 closeEditModal();
                 alert('修改成功！');
                 updateUI();
             } catch (error) {
-                console.error('修改失败:', error);
-                // 云端保存失败时，仍然尝试保存到本地
-                const record = records.find(r => r.id === editingRecordId);
-                if (record) {
-                    record.count16 = editCounts[16];
-                    record.count64 = editCounts[64];
-                    record.duration = duration;
-                    record.points = totalPoints;
-                    saveToLocal();
-                    closeEditModal();
-                    alert('修改成功（本地）');
-                    updateUI();
-                } else {
-                    alert('修改失败，请重试');
-                }
+                console.error('更新失败:', error);
+                closeEditModal();
+                alert('修改成功（本地）');
+                updateUI();
             }
         }
 
@@ -2308,39 +2302,45 @@
             };
 
             try {
-                // 尝试保存到云端
-                if (typeof Bmob !== 'undefined') {
-                    const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                    const record = new CheckinRecord();
-
-                    record.set('user', currentUser);
-                    record.set('date', selectedDate);
-                    record.set('count16', supplementCounts[16]);
-                    record.set('count64', supplementCounts[64]);
-                    record.set('duration', duration);
-                    record.set('points', totalPoints);
-                    record.set('isSupplementary', true);
-
-                    const result = await record.save();
-                    // 更新ID为云端返回的ID
-                    localRecord.id = result.id;
-                    console.log('补卡数据已保存到云端');
-                } else {
-                    console.warn('Bmob不可用，补卡数据仅保存到本地');
-                }
-
                 // 添加到本地记录
                 records.push(localRecord);
                 saveToLocal();
+
+                // 保存到云端
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                    try {
+                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
+                        const record = new CheckinRecord();
+                        record.set('user', localRecord.user);
+                        record.set('date', localRecord.date);
+                        record.set('count16', localRecord.count16);
+                        record.set('count64', localRecord.count64);
+                        record.set('duration', localRecord.duration);
+                        record.set('points', localRecord.points);
+                        record.set('isSupplementary', localRecord.isSupplementary);
+                        record.set('timestamp', localRecord.timestamp);
+
+                        const res = await record.save();
+
+                        // 更新本地记录的 ID
+                        localRecord.id = res.objectId;
+                        const index = records.findIndex(r => r === localRecord);
+                        if (index !== -1) {
+                            records[index] = localRecord;
+                            saveToLocal();
+                        }
+
+                        console.log('✅ 补卡数据已同步到云端');
+                    } catch (error) {
+                        console.error('云端同步失败:', error);
+                    }
+                }
 
                 closeSupplementModal();
                 alert('补打卡成功！✓');
                 updateUI();
             } catch (error) {
-                console.error('补卡提交失败:', error);
-                // 云端保存失败时，仍然保存到本地
-                records.push(localRecord);
-                saveToLocal();
+                console.error('保存失败:', error);
                 closeSupplementModal();
                 alert('补打卡成功（本地）！✓');
                 updateUI();
@@ -2566,14 +2566,14 @@
 
             try {
                 // 删除云端该用户的所有记录
-                if (typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
                     const userRecords = records.filter(r => r.user === userName);
                     for (const record of userRecords) {
                         try {
                             const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                            const query = new Bmob.Query(CheckinRecord);
-                            const obj = await query.get(record.id);
-                            await obj.destroy();
+                            const bmobRecord = new CheckinRecord();
+                            bmobRecord.id = record.id;
+                            await bmobRecord.destroy();
                         } catch (error) {
                             console.error('删除云端记录失败:', error);
                         }
@@ -2917,6 +2917,74 @@
             const date = new Date(timestamp);
             return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         }
+    </script>
+
+    <!-- Bmob SDK 加载 -->
+    <script>
+        // Bmob SDK 加载 - 使用最稳定的 CDN
+        (function loadBmobSDK() {
+            // 尝试按顺序加载多个 CDN 源
+            const cdnList = [
+                'https://cdn.jsdelivr.net/npm/hydrogen-js-sdk@2.3.0/dist/Bmob.min.js',
+                'https://unpkg.com/hydrogen-js-sdk@2.3.0/dist/Bmob.min.js',
+                'https://cdn.staticfile.org/bmob-sdk/2.3.0/Bmob.min.js'
+            ];
+
+            let currentIndex = 0;
+
+            function tryLoadSDK() {
+                if (currentIndex >= cdnList.length) {
+                    console.error('❌ 所有 Bmob CDN 源均加载失败');
+                    updateCloudStatus('❌ Bmob SDK 未加载', '将使用本地模式', 'error');
+                    window.bmobLoaded = false;
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = cdnList[currentIndex];
+
+                script.onload = function() {
+                    console.log('✅ Bmob SDK 加载成功，来源:', cdnList[currentIndex]);
+                    window.bmobLoaded = true;
+
+                    // 初始化 Bmob
+                    if (typeof Bmob !== 'undefined') {
+                        try {
+                            Bmob.initialize(BMOB_CONFIG.applicationId, BMOB_CONFIG.restApiKey);
+                            console.log('✅ Bmob 已初始化');
+                            updateCloudStatus('✅ 云端已连接', 'Bmob 数据同步', 'success');
+
+                            // 加载数据
+                            if (typeof loadRecords === 'function') {
+                                loadRecords();
+                            }
+                        } catch (error) {
+                            console.error('Bmob 初始化失败:', error);
+                            updateCloudStatus('❌ Bmob 初始化失败', '将使用本地模式', 'error');
+                            window.bmobLoaded = false;
+                        }
+                    }
+                };
+
+                script.onerror = function() {
+                    console.warn(`CDN ${currentIndex + 1} 加载失败:`, cdnList[currentIndex]);
+                    currentIndex++;
+                    tryLoadSDK();
+                };
+
+                // 设置 5 秒超时
+                setTimeout(function() {
+                    if (!window.bmobLoaded) {
+                        console.warn(`CDN ${currentIndex + 1} 超时:`, cdnList[currentIndex]);
+                        script.onerror();
+                    }
+                }, 5000);
+
+                document.head.appendChild(script);
+            }
+
+            tryLoadSDK();
+        })();
     </script>
 
 </body>
