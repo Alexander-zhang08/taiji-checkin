@@ -1048,6 +1048,15 @@
                 <button class="btn btn-primary" onclick="loadRecords()" style="margin-top: 10px; width: 100%;">🔄 刷新云端数据</button>
             </div>
 
+            <!-- 本地数据状态 -->
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-title">💾 本地数据状态</div>
+                <div id="localStatus" style="padding: 15px; background: #f5f5f5; border-radius: 10px; font-size: 13px; line-height: 1.6;">
+                    <div>检查中...</div>
+                </div>
+                <button class="btn btn-secondary" onclick="checkLocalData()" style="margin-top: 10px; width: 100%;">🔍 检查本地数据</button>
+            </div>
+
             <div class="card" style="margin-top: 20px;">
                 <div class="card-title">👥 所有用户</div>
                 <div id="allUsersList"></div>
@@ -1242,37 +1251,57 @@
         </div>
     </div>
 
-    <!-- Bmob SDK - 使用多个CDN源备份 -->
+    <!-- Bmob SDK - 使用Bmob官方CDN和多个备用源 -->
     <script>
         // 尝试多个CDN源加载Bmob SDK
         (function() {
             const cdnSources = [
-                'https://cdn.jsdelivr.net/npm/bmob-sdk@2.3.0/dist/Bmob-min.js',
-                'https://unpkg.com/bmob-sdk@2.3.0/dist/Bmob-min.js',
-                'https://cdn.bootcdn.net/ajax/libs/bmob/2.3.0/Bmob-min.js'
+                // Bmob官方CDN（最稳定）
+                'https://unpkg.com/hydrogen-js-sdk@2.3.0/dist/Bmob-min.js',
+                // 其他备用CDN
+                'https://cdn.jsdelivr.net/npm/hydrogen-js-sdk@2.3.0/dist/Bmob-min.js',
+                'https://cdn.bootcdn.net/ajax/libs/bmob/2.3.0/Bmob-min.js',
+                // 旧版SDK作为最后备份
+                'https://unpkg.com/bmob-sdk@2.3.0/dist/Bmob-min.js'
             ];
 
             let currentIndex = 0;
+            let loadTimeout;
 
             function loadScript(src) {
                 return new Promise((resolve, reject) => {
+                    console.log(`🔄 尝试加载 Bmob SDK: ${src}`);
                     const script = document.createElement('script');
                     script.src = src;
+
+                    // 设置超时
+                    const timeout = setTimeout(() => {
+                        console.warn(`⏱️ 加载超时（10秒）: ${src}`);
+                        script.remove();
+                        reject(new Error('timeout'));
+                    }, 10000);
+
                     script.onload = () => {
-                        console.log('Bmob SDK 加载成功:', src);
+                        clearTimeout(timeout);
+                        console.log(`✅ Bmob SDK 加载成功: ${src}`);
                         resolve();
                     };
-                    script.onerror = () => {
-                        console.warn('Bmob SDK 加载失败:', src);
-                        reject();
+
+                    script.onerror = (error) => {
+                        clearTimeout(timeout);
+                        console.warn(`❌ Bmob SDK 加载失败: ${src}`, error);
+                        script.remove();
+                        reject(error);
                     };
+
                     document.head.appendChild(script);
                 });
             }
 
             function tryLoadNext() {
                 if (currentIndex >= cdnSources.length) {
-                    console.error('所有Bmob SDK源都加载失败，将使用本地模式');
+                    console.error('❌ 所有 Bmob SDK 源都加载失败，将使用本地模式');
+                    console.error('已尝试的CDN源:', cdnSources);
                     window.bmobLoadFailed = true;
                     return;
                 }
@@ -1280,10 +1309,12 @@
                 loadScript(cdnSources[currentIndex])
                     .then(() => {
                         window.bmobLoadSuccess = true;
+                        console.log('🎉 Bmob SDK 准备就绪');
                     })
-                    .catch(() => {
+                    .catch((error) => {
                         currentIndex++;
-                        tryLoadNext();
+                        console.log(`⏭️ 切换到下一个源 (${currentIndex + 1}/${cdnSources.length})`);
+                        setTimeout(() => tryLoadNext(), 500); // 延迟500ms再尝试下一个
                     });
             }
 
@@ -1388,6 +1419,9 @@
 
             // 从打卡记录中提取用户，确保数据打通
             syncUsersFromRecords();
+
+            // 自动检查本地数据状态
+            setTimeout(() => checkLocalData(), 1000);
 
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
@@ -1811,6 +1845,68 @@
                 <div style="font-weight: bold; margin-bottom: 5px;">${title}</div>
                 <div>${message}</div>
             `;
+        }
+
+        // 检查本地数据
+        function checkLocalData() {
+            const container = document.getElementById('localStatus');
+            if (!container) return;
+
+            // 检查localStorage中的数据
+            const localRecords = localStorage.getItem('taijiRecords');
+            const localUsers = localStorage.getItem('taijiUsers');
+
+            let recordsCount = 0;
+            let usersCount = 0;
+            let userNames = [];
+
+            if (localRecords) {
+                try {
+                    const parsed = JSON.parse(localRecords);
+                    recordsCount = parsed.length;
+                    userNames = [...new Set(parsed.map(r => r.user))];
+                    usersCount = userNames.length;
+                } catch (e) {
+                    console.error('解析本地记录失败:', e);
+                }
+            }
+
+            let message = '';
+            let bgColor = '#e8f5e9';
+            let textColor = '#2e7d32';
+
+            if (recordsCount > 0) {
+                message = `
+                    <div style="font-weight: bold; margin-bottom: 5px;">✅ 本地数据正常</div>
+                    <div>打卡记录: ${recordsCount} 条</div>
+                    <div>用户: ${usersCount} 个（${userNames.join(', ')}）</div>
+                    <div style="margin-top: 8px; font-size: 12px; opacity: 0.8;">
+                        本地数据保存在浏览器 localStorage 中
+                    </div>
+                `;
+            } else {
+                bgColor = '#fff3e0';
+                textColor = '#e65100';
+                message = `
+                    <div style="font-weight: bold; margin-bottom: 5px;">⚠️ 本地无数据</div>
+                    <div>本地浏览器中没有找到打卡记录</div>
+                    <div style="margin-top: 8px; font-size: 12px;">
+                        可能原因：<br>
+                        1. 首次使用<br>
+                        2. 清除了浏览器数据<br>
+                        3. 使用了无痕模式
+                    </div>
+                `;
+            }
+
+            container.style.background = bgColor;
+            container.style.color = textColor;
+            container.innerHTML = message;
+
+            console.log('📊 本地数据检查:');
+            console.log('- 打卡记录:', recordsCount, '条');
+            console.log('- 用户:', usersCount, '个');
+            console.log('- 用户列表:', userNames);
         }
 
         // 提交打卡
