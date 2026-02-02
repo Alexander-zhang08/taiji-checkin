@@ -1242,8 +1242,54 @@
         </div>
     </div>
 
-    <!-- Bmob SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/bmob-sdk@2.3.0/dist/Bmob-min.js"></script>
+    <!-- Bmob SDK - 使用多个CDN源备份 -->
+    <script>
+        // 尝试多个CDN源加载Bmob SDK
+        (function() {
+            const cdnSources = [
+                'https://cdn.jsdelivr.net/npm/bmob-sdk@2.3.0/dist/Bmob-min.js',
+                'https://unpkg.com/bmob-sdk@2.3.0/dist/Bmob-min.js',
+                'https://cdn.bootcdn.net/ajax/libs/bmob/2.3.0/Bmob-min.js'
+            ];
+
+            let currentIndex = 0;
+
+            function loadScript(src) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = () => {
+                        console.log('Bmob SDK 加载成功:', src);
+                        resolve();
+                    };
+                    script.onerror = () => {
+                        console.warn('Bmob SDK 加载失败:', src);
+                        reject();
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+
+            function tryLoadNext() {
+                if (currentIndex >= cdnSources.length) {
+                    console.error('所有Bmob SDK源都加载失败，将使用本地模式');
+                    window.bmobLoadFailed = true;
+                    return;
+                }
+
+                loadScript(cdnSources[currentIndex])
+                    .then(() => {
+                        window.bmobLoadSuccess = true;
+                    })
+                    .catch(() => {
+                        currentIndex++;
+                        tryLoadNext();
+                    });
+            }
+
+            tryLoadNext();
+        })();
+    </script>
 
     <script>
         // ==================== Bmob 配置 ====================
@@ -1254,16 +1300,64 @@
         };
 
         // 初始化 Bmob
-        try {
-            if (typeof Bmob !== 'undefined') {
-                Bmob.initialize(BMOB_CONFIG.applicationId, BMOB_CONFIG.restApiKey);
-                console.log('Bmob初始化成功');
-            } else {
-                console.warn('Bmob SDK未加载，将使用本地模式');
+        function initBmob() {
+            try {
+                if (typeof Bmob !== 'undefined') {
+                    Bmob.initialize(BMOB_CONFIG.applicationId, BMOB_CONFIG.restApiKey);
+                    console.log('✅ Bmob 初始化成功');
+                    return true;
+                } else {
+                    console.warn('⚠️ Bmob SDK 未加载，将使用本地模式');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Bmob 初始化失败:', error);
+                return false;
             }
-        } catch (error) {
-            console.error('Bmob初始化失败:', error);
         }
+
+        // 等待 Bmob SDK 加载完成
+        function waitForBmob() {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const maxAttempts = 50; // 最多等待5秒
+
+                const checkInterval = setInterval(() => {
+                    attempts++;
+
+                    if (typeof Bmob !== 'undefined') {
+                        clearInterval(checkInterval);
+                        console.log('✅ Bmob SDK 已加载');
+                        initBmob();
+                        resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        console.warn('⚠️ Bmob SDK 加载超时（5秒），将使用本地模式');
+                        resolve(false);
+                    }
+                }, 100);
+            });
+        }
+
+        // 初始化应用（异步）
+        async function initApp() {
+            console.log('🚀 应用启动...');
+
+            // 等待 Bmob SDK 加载
+            const bmobLoaded = await waitForBmob();
+
+            if (bmobLoaded) {
+                console.log('📡 将使用云端同步模式');
+            } else {
+                console.log('💾 将使用本地存储模式');
+            }
+
+            // 继续原有的初始化流程
+            init();
+        }
+
+        // 启动应用
+        initApp();
 
         // ==================== 数据结构 ====================
         let currentUser = '';
@@ -2649,9 +2743,6 @@
             const date = new Date(timestamp);
             return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         }
-
-        // 初始化应用
-        init();
     </script>
 
 </body>
