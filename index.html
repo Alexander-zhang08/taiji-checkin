@@ -1666,6 +1666,8 @@
         function selectDate(dateStr) {
             selectedDate = dateStr;
             const dayRecords = records.filter(r => r.date === dateStr);
+            const today = new Date().toISOString().split('T')[0];
+            const isPastOrToday = dateStr <= today;
 
             const container = document.getElementById('selectedDateRecords');
             const title = document.getElementById('selectedDateTitle');
@@ -1673,7 +1675,8 @@
             title.textContent = `${dateStr} 的打卡记录`;
 
             if (dayRecords.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="icon">📝</div><div>这天没有打卡记录</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="icon">📝</div><div>这天没有打卡记录</div></div>' +
+                    (isPastOrToday ? `<button class="btn btn-primary" onclick="quickCheckin('${dateStr}')" style="margin-top: 15px; width: 100%;">✓ 为这天打卡</button>` : '');
                 return;
             }
 
@@ -1699,7 +1702,32 @@
                     </div>
                     ` : ''}
                 </div>
-            `).join('');
+            `).join('') +
+            (isPastOrToday && !dayRecords.some(r => r.user === currentUser) ?
+                `<button class="btn btn-primary" onclick="quickCheckin('${dateStr}')" style="margin-top: 15px; width: 100%;">✓ 为这天打卡</button>` : '');
+        }
+
+        // 快速打卡（从日历）
+        function quickCheckin(dateStr) {
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            if (isToday) {
+                // 今天直接跳转到打卡页面
+                switchTab('checkin');
+            } else {
+                // 过去的日期使用补打卡功能
+                document.getElementById('supplementDate').value = dateStr;
+                document.getElementById('supplementDate').max = new Date().toISOString().split('T')[0];
+
+                // 重置表单
+                supplementCounts = { 16: 0, 64: 0 };
+                document.getElementById('supplementCount16').textContent = '0';
+                document.getElementById('supplementCount64').textContent = '0';
+                document.getElementById('supplementDuration').value = '';
+                updateSupplementPracticeItemStyle(16, 0);
+                updateSupplementPracticeItemStyle(64, 0);
+
+                document.getElementById('supplementModal').classList.add('active');
+            }
         }
 
         // 切换月份
