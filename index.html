@@ -1302,6 +1302,28 @@
             restApiKey: '9511b279aa8120af6c878a9873892973'
         };
 
+        // ==================== 全局变量 ====================
+        let currentUser = '';
+        let records = [];
+        let currentMonth = new Date();
+        let selectedDate = null;
+        let editingRecordId = null;
+        let currentDuration = 0; // 当前训练时长
+
+        // 计数器状态
+        let counts = { 16: 0, 64: 0 };
+        let editCounts = { 16: 0, 64: 0 };
+        let supplementCounts = { 16: 0, 64: 0 };
+
+        // 用户列表
+        let usersList = [];
+
+        // 可选头像列表
+        const avatarList = ['🥋', '👤', '🧘', '🤸', '🏃', '💪', '⚡', '🔥', '🌟', '🎯', '🦁', '🐯', '🦅', '🐉', '🌊', '⛰️'];
+
+        // 自动刷新定时器
+        let refreshTimer = null;
+
         // Bmob REST API 封装（不需要 SDK）
         const BmobAPI = {
             baseUrl: 'https://api2.bmob.cn/1',
@@ -1386,28 +1408,6 @@
 
         // 启动应用
         initApp();
-
-        // ==================== 数据结构 ====================
-        let currentUser = '';
-        let records = [];
-        let currentMonth = new Date();
-        let selectedDate = null;
-        let editingRecordId = null;
-        let currentDuration = 0; // 当前训练时长
-
-        // 计数器状态
-        let counts = { 16: 0, 64: 0 };
-        let editCounts = { 16: 0, 64: 0 };
-        let supplementCounts = { 16: 0, 64: 0 };
-
-        // 用户列表
-        let usersList = [];
-
-        // 可选头像列表
-        const avatarList = ['🥋', '👤', '🧘', '🤸', '🏃', '💪', '⚡', '🔥', '🌟', '🎯', '🦁', '🐯', '🦅', '🐉', '🌊', '⛰️'];
-
-        // 自动刷新定时器
-        let refreshTimer = null;
 
         // ==================== 初始化 ====================
         function init() {
