@@ -889,7 +889,7 @@
         </div>
 
         <!-- 底部导航 -->
-        <div class="bottom-nav">
+        <div class="bottom-nav" id="bottomNav" style="display: none;">
             <div class="nav-item active" onclick="switchTab('checkin')">
                 <div class="nav-icon">✓</div>
                 <div class="nav-text">打卡</div>
@@ -1280,6 +1280,9 @@
                 currentUser = '';
                 localStorage.removeItem('currentUser');
 
+                // 隐藏底部导航
+                document.getElementById('bottomNav').style.display = 'none';
+
                 // 隐藏所有section
                 document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
                 document.getElementById('loginSection').classList.add('active');
@@ -1297,6 +1300,10 @@
             document.getElementById('newUserSection').classList.remove('active');
             document.getElementById('checkinSection').classList.add('active');
             document.getElementById('headerInfo').textContent = `你好，${currentUser}`;
+
+            // 显示底部导航
+            document.getElementById('bottomNav').style.display = 'flex';
+
             loadRecords();
 
             // 启动自动刷新（每30秒）
