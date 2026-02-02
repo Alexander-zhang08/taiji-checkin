@@ -878,6 +878,284 @@
                 padding: 6px !important;
             }
         }
+
+        /* ==================== 澄心文化板块样式 ==================== */
+        .culture-hero {
+            height: 33vh;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+
+        .taiji-bg {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background:
+                radial-gradient(circle at 50% 25%, white 25%, transparent 25%),
+                radial-gradient(circle at 50% 75%, #1a1a2e 25%, transparent 25%),
+                linear-gradient(to bottom, white 50%, #1a1a2e 50%);
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .culture-slider {
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .slider-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+        }
+
+        .slider-item.active {
+            opacity: 1;
+        }
+
+        .slider-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .slider-author {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+
+        .slider-excerpt {
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 80%;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 帖子列表 */
+        .posts-container {
+            padding: 15px;
+        }
+
+        .post-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .post-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .post-date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .post-content {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .post-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .post-author {
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .post-action-btn {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .post-action-btn:hover {
+            background: #f5f5f5;
+            color: #667eea;
+        }
+
+        /* 帖子详情页 */
+        .post-detail {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 2000;
+            overflow-y: auto;
+        }
+
+        .post-detail.active {
+            display: block;
+        }
+
+        .post-detail-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .post-detail-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .post-detail-body {
+            padding: 20px;
+        }
+
+        .post-detail-image {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .post-detail-content {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+        }
+
+        .post-detail-meta {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* 新建/编辑帖子表单 */
+        .post-form {
+            padding: 20px;
+        }
+
+        .image-upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .image-upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .image-preview-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .remove-image-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -1146,6 +1424,29 @@
             </div>
         </div>
 
+        <!-- 澄心文化板块 -->
+        <div class="content section" id="cultureSection">
+            <!-- 太极风格背景 -->
+            <div class="culture-hero">
+                <div class="taiji-bg"></div>
+                <div class="culture-slider" id="cultureSlider">
+                    <!-- 轮播内容会动态插入 -->
+                </div>
+            </div>
+
+            <!-- 发布按钮 -->
+            <div style="padding: 15px;">
+                <button class="btn btn-primary" onclick="showNewPost()" style="width: 100%;">
+                    ✍️ 发布新帖
+                </button>
+            </div>
+
+            <!-- 帖子列表 -->
+            <div class="posts-container" id="postsContainer">
+                <!-- 帖子列表会动态插入 -->
+            </div>
+        </div>
+
         <!-- 底部导航 -->
         <div class="bottom-nav" id="bottomNav" style="display: none;">
             <div class="nav-item active" onclick="switchTab('checkin')">
@@ -1163,6 +1464,10 @@
             <div class="nav-item" onclick="switchTab('user')">
                 <div class="nav-icon">👤</div>
                 <div class="nav-text">用户</div>
+            </div>
+            <div class="nav-item" onclick="switchTab('culture')">
+                <div class="nav-icon">📖</div>
+                <div class="nav-text">文化</div>
             </div>
         </div>
     </div>
@@ -1483,6 +1788,12 @@
             // 从打卡记录中提取用户，确保数据打通
             syncUsersFromRecords();
 
+            // 加载帖子数据（但不渲染，等用户点击文化标签时再渲染）
+            const saved = localStorage.getItem('taijiPosts');
+            if (saved) {
+                postsList = JSON.parse(saved);
+            }
+
             // 自动检查本地数据状态
             setTimeout(() => checkLocalData(), 1000);
 
@@ -1758,20 +2069,42 @@
                 return;
             }
 
-            // 验证密码是否正确
-            if (password !== user.password) {
-                alert('密码错误，请重试');
+            // 调试信息
+            console.log('========== 登录调试信息 ==========');
+            console.log('输入的用户名:', userName);
+            console.log('输入的密码:', password);
+            console.log('存储的密码:', user.password);
+            console.log('密码类型 - 输入:', typeof password, '存储:', typeof user.password);
+            console.log('密码长度 - 输入:', password.length, '存储:', user.password ? user.password.length : 'undefined');
+            console.log('密码直接比较:', password === user.password);
+
+            // 验证密码是否正确（增强版：去除首尾空格，处理undefined）
+            const inputPassword = password.trim();
+            const storedPassword = user.password ? user.password.trim() : '';
+
+            console.log('处理后的密码 - 输入:', inputPassword, '存储:', storedPassword);
+            console.log('处理后比较:', inputPassword === storedPassword);
+            console.log('===================================');
+
+            if (!storedPassword) {
+                alert('❌ 该用户未设置密码\n\n请使用"忘记密码"功能重置密码');
+                return;
+            }
+
+            if (inputPassword !== storedPassword) {
+                alert(`❌ 密码错误\n\n提示：\n• 密码区分大小写\n• 请检查是否有多余空格\n• 输入长度：${inputPassword.length} 字符\n• 存储长度：${storedPassword.length} 字符\n\n如忘记密码，请点击"忘记密码"重置`);
                 return;
             }
 
             // 如果勾选"记住密码"，保存密码；否则清除保存的密码
             if (rememberPassword) {
-                localStorage.setItem(`savedPassword_${userName}`, password);
+                localStorage.setItem(`savedPassword_${userName}`, inputPassword);
             } else {
                 localStorage.removeItem(`savedPassword_${userName}`);
             }
 
             // 登录成功
+            console.log('✅ 登录成功！');
             currentUser = userName;
             localStorage.setItem('currentUser', userName);
 
@@ -3092,6 +3425,9 @@
 
         // 切换标签页
         function switchTab(tab) {
+            // 停止轮播（如果正在运行）
+            stopSlider();
+
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
@@ -3112,6 +3448,374 @@
                 document.getElementById('userSection').classList.add('active');
                 document.querySelectorAll('.nav-item')[3].classList.add('active');
                 updateUserSection();
+            } else if (tab === 'culture') {
+                document.getElementById('cultureSection').classList.add('active');
+                document.querySelectorAll('.nav-item')[4].classList.add('active');
+                loadPosts();
+            }
+        }
+
+        // ==================== 澄心文化板块 ====================
+
+        // 帖子数据
+        let postsList = [];
+        let currentSlideIndex = 0;
+        let sliderTimer = null;
+
+        // 加载帖子数据
+        function loadPosts() {
+            const saved = localStorage.getItem('taijiPosts');
+            if (saved) {
+                postsList = JSON.parse(saved);
+            }
+            renderPosts();
+            initSlider();
+        }
+
+        // 保存帖子数据
+        function savePosts() {
+            localStorage.setItem('taijiPosts', JSON.stringify(postsList));
+        }
+
+        // 渲染帖子列表
+        function renderPosts() {
+            const container = document.getElementById('postsContainer');
+            if (postsList.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px 20px; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📝</div>
+                        <div>还没有帖子，快来发布第一篇吧！</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = postsList.map(post => `
+                <div class="post-card" onclick="viewPost('${post.id}')">
+                    <div class="post-header">
+                        <h3 class="post-title">${post.title}</h3>
+                        <span class="post-date">${formatPostDate(post.createdAt)}</span>
+                    </div>
+                    ${post.image ? `<img src="${post.image}" class="post-image" alt="${post.title}">` : ''}
+                    <div class="post-content">${post.content}</div>
+                    <div class="post-footer">
+                        <span class="post-author">👤 ${post.author}</span>
+                        <div class="post-actions">
+                            <button class="post-action-btn" onclick="event.stopPropagation(); editPost('${post.id}')">✏️ 编辑</button>
+                            <button class="post-action-btn" onclick="event.stopPropagation(); deletePost('${post.id}')">🗑️ 删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 初始化轮播
+        function initSlider() {
+            const slider = document.getElementById('cultureSlider');
+
+            // 取最新的3个帖子用于轮播
+            const featuredPosts = postsList.slice(0, 3);
+
+            if (featuredPosts.length === 0) {
+                slider.innerHTML = `
+                    <div class="slider-item active">
+                        <div class="slider-title">澄心太极 · 千遍精进</div>
+                        <div class="slider-excerpt">分享你的太极心得与感悟</div>
+                    </div>
+                `;
+                return;
+            }
+
+            slider.innerHTML = featuredPosts.map((post, index) => `
+                <div class="slider-item ${index === 0 ? 'active' : ''}">
+                    <div class="slider-title">${post.title}</div>
+                    <div class="slider-author">by ${post.author}</div>
+                    <div class="slider-excerpt">${post.content.substring(0, 60)}...</div>
+                </div>
+            `).join('');
+
+            // 启动自动轮播
+            if (featuredPosts.length > 1) {
+                startSlider(featuredPosts.length);
+            }
+        }
+
+        // 启动轮播
+        function startSlider(total) {
+            stopSlider();
+            sliderTimer = setInterval(() => {
+                const items = document.querySelectorAll('.slider-item');
+                items[currentSlideIndex].classList.remove('active');
+                currentSlideIndex = (currentSlideIndex + 1) % total;
+                items[currentSlideIndex].classList.add('active');
+            }, 4000);
+        }
+
+        // 停止轮播
+        function stopSlider() {
+            if (sliderTimer) {
+                clearInterval(sliderTimer);
+                sliderTimer = null;
+            }
+        }
+
+        // 显示新建帖子表单
+        function showNewPost() {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'postFormModal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>✍️ 发布新帖</h3>
+                        <button class="close-btn" onclick="closePostForm()">×</button>
+                    </div>
+                    <div class="modal-body post-form">
+                        <div class="input-group">
+                            <label>标题</label>
+                            <input type="text" id="postTitle" placeholder="给你的帖子起个标题" maxlength="50">
+                        </div>
+                        <div class="input-group">
+                            <label>内容</label>
+                            <textarea id="postContent" rows="6" placeholder="分享你的太极心得与感悟..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>上传图片（可选）</label>
+                            <div class="image-upload-area" onclick="document.getElementById('postImage').click()">
+                                <div id="imageUploadText">📷 点击上传图片</div>
+                                <div id="imagePreviewContainer"></div>
+                            </div>
+                            <input type="file" id="postImage" accept="image/*" style="display: none;" onchange="previewImage(this)">
+                        </div>
+                        <button class="btn btn-primary" onclick="submitPost()" style="width: 100%;">发布</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // 关闭帖子表单
+        function closePostForm() {
+            const modal = document.getElementById('postFormModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // 预览图片
+        function previewImage(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const container = document.getElementById('imagePreviewContainer');
+                    document.getElementById('imageUploadText').style.display = 'none';
+                    container.innerHTML = `
+                        <div class="image-preview-container">
+                            <img src="${e.target.result}" class="image-preview" id="previewImg">
+                            <button class="remove-image-btn" onclick="removePreviewImage()">×</button>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 移除预览图片
+        function removePreviewImage() {
+            document.getElementById('postImage').value = '';
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            document.getElementById('imageUploadText').style.display = 'block';
+        }
+
+        // 提交帖子
+        function submitPost() {
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const imageElement = document.getElementById('previewImg');
+            const image = imageElement ? imageElement.src : '';
+
+            if (!title) {
+                alert('请输入标题');
+                return;
+            }
+
+            if (!content) {
+                alert('请输入内容');
+                return;
+            }
+
+            const newPost = {
+                id: Date.now().toString(),
+                title: title,
+                content: content,
+                image: image,
+                author: currentUser || '匿名',
+                createdAt: new Date().toISOString()
+            };
+
+            postsList.unshift(newPost);
+            savePosts();
+            renderPosts();
+            initSlider();
+            closePostForm();
+
+            alert('✅ 发布成功！');
+        }
+
+        // 查看帖子详情
+        function viewPost(id) {
+            const post = postsList.find(p => p.id === id);
+            if (!post) return;
+
+            const detail = document.createElement('div');
+            detail.className = 'post-detail active';
+            detail.id = 'postDetail';
+            detail.innerHTML = `
+                <div class="post-detail-header">
+                    <h2 class="post-detail-title">${post.title}</h2>
+                    <button class="close-btn" onclick="closePostDetail()">×</button>
+                </div>
+                <div class="post-detail-body">
+                    ${post.image ? `<img src="${post.image}" class="post-detail-image" alt="${post.title}">` : ''}
+                    <div class="post-detail-content">${post.content}</div>
+                    <div class="post-detail-meta">
+                        <span>👤 ${post.author}</span>
+                        <span>📅 ${formatPostDate(post.createdAt)}</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn btn-secondary" onclick="closePostDetail()" style="flex: 1;">返回</button>
+                        <button class="btn" onclick="editPost('${post.id}')" style="flex: 1; background: #4CAF50; color: white;">✏️ 编辑</button>
+                        <button class="btn" onclick="deletePost('${post.id}')" style="flex: 1; background: #f44336; color: white;">🗑️ 删除</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(detail);
+        }
+
+        // 关闭帖子详情
+        function closePostDetail() {
+            const detail = document.getElementById('postDetail');
+            if (detail) {
+                detail.remove();
+            }
+        }
+
+        // 编辑帖子
+        function editPost(id) {
+            closePostDetail();
+
+            const post = postsList.find(p => p.id === id);
+            if (!post) return;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'postFormModal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>✏️ 编辑帖子</h3>
+                        <button class="close-btn" onclick="closePostForm()">×</button>
+                    </div>
+                    <div class="modal-body post-form">
+                        <div class="input-group">
+                            <label>标题</label>
+                            <input type="text" id="postTitle" value="${post.title}" maxlength="50">
+                        </div>
+                        <div class="input-group">
+                            <label>内容</label>
+                            <textarea id="postContent" rows="6" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; resize: vertical;">${post.content}</textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>上传图片（可选）</label>
+                            <div class="image-upload-area" onclick="document.getElementById('postImage').click()">
+                                <div id="imageUploadText" style="display: ${post.image ? 'none' : 'block'}">📷 点击上传图片</div>
+                                <div id="imagePreviewContainer">
+                                    ${post.image ? `
+                                        <div class="image-preview-container">
+                                            <img src="${post.image}" class="image-preview" id="previewImg">
+                                            <button class="remove-image-btn" onclick="removePreviewImage()">×</button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <input type="file" id="postImage" accept="image/*" style="display: none;" onchange="previewImage(this)">
+                        </div>
+                        <button class="btn btn-primary" onclick="updatePost('${id}')" style="width: 100%;">保存修改</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // 更新帖子
+        function updatePost(id) {
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const imageElement = document.getElementById('previewImg');
+            const image = imageElement ? imageElement.src : '';
+
+            if (!title) {
+                alert('请输入标题');
+                return;
+            }
+
+            if (!content) {
+                alert('请输入内容');
+                return;
+            }
+
+            const post = postsList.find(p => p.id === id);
+            if (post) {
+                post.title = title;
+                post.content = content;
+                post.image = image;
+                post.updatedAt = new Date().toISOString();
+
+                savePosts();
+                renderPosts();
+                initSlider();
+                closePostForm();
+
+                alert('✅ 保存成功！');
+            }
+        }
+
+        // 删除帖子
+        function deletePost(id) {
+            if (!confirm('确定要删除这篇帖子吗？')) {
+                return;
+            }
+
+            postsList = postsList.filter(p => p.id !== id);
+            savePosts();
+            renderPosts();
+            initSlider();
+            closePostDetail();
+
+            alert('✅ 删除成功！');
+        }
+
+        // 格式化日期
+        function formatPostDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (days === 0) {
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                if (hours === 0) {
+                    const minutes = Math.floor(diff / (1000 * 60));
+                    return minutes === 0 ? '刚刚' : `${minutes}分钟前`;
+                }
+                return `${hours}小时前`;
+            } else if (days === 1) {
+                return '昨天';
+            } else if (days < 7) {
+                return `${days}天前`;
+            } else {
+                return `${date.getMonth() + 1}/${date.getDate()}`;
             }
         }
 
