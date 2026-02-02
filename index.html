@@ -1055,6 +1055,7 @@
         // ==================== 初始化 ====================
         function init() {
             loadUsersList();
+            loadFromLocal(); // 先从本地加载数据
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 currentUser = savedUser;
@@ -1086,31 +1087,52 @@
         }
 
         // 显示老用户登录界面
-        function showOldUserLogin() {
-            // 从云端加载所有用户
-            const allUsers = [...new Set(records.map(r => r.user))];
-
-            // 合并本地用户列表和云端用户
-            const combinedUsers = new Set([...usersList.map(u => u.name), ...allUsers]);
-
-            const container = document.getElementById('oldUsersList');
-
-            if (combinedUsers.size === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有用户<br/>请返回创建新用户</div>';
-            } else {
-                container.innerHTML = Array.from(combinedUsers).map(userName => {
-                    const user = usersList.find(u => u.name === userName);
-                    return `
-                        <div class="user-list-item" onclick="quickLogin('${userName}')">
-                            <div class="user-list-name">${userName}</div>
-                            ${user ? `<div class="user-list-stats">注册于 ${new Date(user.createdAt).toLocaleDateString()}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
-            }
-
+        async function showOldUserLogin() {
+            // 切换到老用户界面
             document.getElementById('loginSection').classList.remove('active');
             document.getElementById('oldUserSection').classList.add('active');
+
+            const container = document.getElementById('oldUsersList');
+            container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">加载中...</div>';
+
+            // 尝试从云端加载数据
+            try {
+                if (typeof Bmob !== 'undefined') {
+                    const query = Bmob.Query('CheckinRecord');
+                    query.limit(1000);
+                    const result = await query.find();
+
+                    const cloudRecords = result.map(item => ({
+                        user: item.get('user')
+                    }));
+
+                    // 合并云端用户
+                    const cloudUsers = [...new Set(cloudRecords.map(r => r.user))];
+                    cloudUsers.forEach(userName => {
+                        if (!usersList.find(u => u.name === userName)) {
+                            usersList.push({
+                                name: userName,
+                                createdAt: new Date().toISOString()
+                            });
+                        }
+                    });
+                    saveUsersList();
+                }
+            } catch (error) {
+                console.warn('加载云端用户失败:', error);
+            }
+
+            // 显示用户列表
+            if (usersList.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有用户<br/>请返回创建新用户</div>';
+            } else {
+                container.innerHTML = usersList.map(user => `
+                    <div class="user-list-item" onclick="quickLogin('${user.name}')">
+                        <div class="user-list-name">${user.name}</div>
+                        <div class="user-list-stats">注册于 ${new Date(user.createdAt).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            }
         }
 
         // 显示新用户注册界面
