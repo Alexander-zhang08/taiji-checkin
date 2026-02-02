@@ -682,10 +682,167 @@
         @media (max-width: 500px) {
             .container {
                 max-width: 100%;
+                padding: 0 10px 80px;
             }
 
             .bottom-nav {
                 max-width: 100%;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .user-info {
+                font-size: 12px;
+            }
+
+            .cloud-badge {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+
+            .card-title {
+                font-size: 16px;
+            }
+
+            .practice-item {
+                padding: 15px;
+            }
+
+            .practice-name {
+                font-size: 14px;
+            }
+
+            .counter-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+
+            .counter-value {
+                font-size: 24px;
+                min-width: 60px !important;
+            }
+
+            .btn {
+                font-size: 15px;
+                padding: 12px;
+            }
+
+            .record-item {
+                padding: 12px;
+            }
+
+            .record-header {
+                font-size: 13px;
+            }
+
+            .record-content {
+                font-size: 12px;
+            }
+
+            .record-btn {
+                font-size: 11px;
+                padding: 6px 10px !important;
+            }
+
+            .calendar-title {
+                font-size: 16px;
+            }
+
+            .calendar-day {
+                font-size: 13px;
+                height: 35px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .stat-label {
+                font-size: 11px;
+            }
+
+            .ranking-title {
+                font-size: 16px;
+            }
+
+            .ranking-name {
+                font-size: 14px;
+            }
+
+            .ranking-detail {
+                font-size: 11px;
+            }
+
+            .user-list-item {
+                padding: 12px;
+                gap: 8px !important;
+            }
+
+            .user-list-name {
+                font-size: 14px;
+            }
+
+            .user-list-stats {
+                font-size: 11px;
+            }
+
+            .modal-content {
+                max-width: 90%;
+                margin: 30px auto;
+                padding: 20px;
+            }
+
+            .modal-title {
+                font-size: 16px;
+            }
+
+            .input-group label {
+                font-size: 13px;
+            }
+
+            .input-group input,
+            .input-group textarea,
+            .input-group select {
+                font-size: 14px;
+            }
+
+            .login-card {
+                padding: 20px;
+            }
+
+            .login-btn {
+                font-size: 15px;
+            }
+
+            /* 头像选择器移动端优化 */
+            #avatarSelector > div {
+                font-size: 24px !important;
+                padding: 6px !important;
+            }
+
+            /* 记录卡片的操作按钮横向排列优化 */
+            .record-actions {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .record-actions .record-btn {
+                flex: 1;
+                min-width: 70px;
+            }
+
+            /* 用户管理中的操作按钮 */
+            .user-list-item > div:last-child {
+                flex-direction: column;
+                gap: 3px !important;
+            }
+
+            .user-list-item > div:last-child button {
+                width: 45px !important;
+                padding: 6px !important;
             }
         }
     </style>
@@ -1334,8 +1491,10 @@
         // ==================== 显示应用 ====================
         // 获取用户显示名称（优先显示昵称）
         function getUserDisplayName(userName) {
+            if (!userName) return '未知用户';
             const user = usersList.find(u => u.name === userName);
-            return user && user.nickname ? user.nickname : userName;
+            if (!user) return userName;
+            return user.nickname || userName;
         }
 
         function showApp() {
@@ -2130,10 +2289,12 @@
                 return;
             }
 
-            container.innerHTML = dayRecords.map(record => `
+            container.innerHTML = dayRecords.map(record => {
+                const displayName = getUserDisplayName(record.user);
+                return `
                 <div class="record-item">
                     <div class="record-header">
-                        <span class="record-date">${record.user}</span>
+                        <span class="record-date">${displayName}</span>
                         <div>
                             <span class="record-points">+${record.points}分</span>
                             ${record.isSupplementary ? '<span class="supplement-badge">补卡</span>' : ''}
@@ -2152,7 +2313,8 @@
                     </div>
                     ` : ''}
                 </div>
-            `).join('') +
+                `;
+            }).join('') +
             (isPastOrToday && !dayRecords.some(r => r.user === currentUser) ?
                 `<button class="btn btn-primary" onclick="quickCheckin('${dateStr}')" style="margin-top: 15px; width: 100%;">✓ 为这天打卡</button>` : '');
         }
