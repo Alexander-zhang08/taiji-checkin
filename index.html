@@ -699,21 +699,51 @@
             <div class="cloud-badge">☁️ 云端同步中</div>
         </div>
 
-        <!-- 登录界面 -->
+        <!-- 登录界面 - 选择用户类型 -->
         <div class="content section active" id="loginSection">
             <div class="login-box">
                 <div class="logo">🥋</div>
                 <h2>澄心太极-千遍精进</h2>
+                <p style="color: #666; margin: 20px 0; text-align: center;">欢迎来到澄心太极</p>
 
-                <!-- 已有用户列表 -->
-                <div id="existingUsers" style="margin-bottom: 20px;"></div>
-
-                <!-- 新建用户 -->
-                <div class="input-group">
-                    <label>或者创建新用户</label>
-                    <input type="text" id="userName" placeholder="例如：张三" maxlength="10">
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <button class="btn btn-primary" onclick="showOldUserLogin()" style="padding: 20px;">
+                        <div style="font-size: 18px; margin-bottom: 5px;">👤 老用户登录</div>
+                        <div style="font-size: 13px; opacity: 0.9;">选择已有账号快速登录</div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="showNewUserRegister()" style="padding: 20px;">
+                        <div style="font-size: 18px; margin-bottom: 5px;">✨ 新用户注册</div>
+                        <div style="font-size: 13px; opacity: 0.9;">创建新账号开始练习</div>
+                    </button>
                 </div>
-                <button class="btn btn-primary" onclick="login()">开始打卡</button>
+            </div>
+        </div>
+
+        <!-- 老用户登录界面 -->
+        <div class="content section" id="oldUserSection">
+            <div class="login-box">
+                <div class="logo">🥋</div>
+                <h2>选择你的账号</h2>
+
+                <!-- 老用户列表 -->
+                <div id="oldUsersList" style="margin: 20px 0;"></div>
+
+                <button class="btn btn-secondary" onclick="backToLogin()" style="width: 100%;">← 返回</button>
+            </div>
+        </div>
+
+        <!-- 新用户注册界面 -->
+        <div class="content section" id="newUserSection">
+            <div class="login-box">
+                <div class="logo">🥋</div>
+                <h2>创建新账号</h2>
+
+                <div class="input-group" style="margin: 20px 0;">
+                    <label>请输入你的名字</label>
+                    <input type="text" id="newUserName" placeholder="例如：张三" maxlength="10">
+                </div>
+                <button class="btn btn-primary" onclick="registerNewUser()" style="width: 100%; margin-bottom: 10px;">开始练习</button>
+                <button class="btn btn-secondary" onclick="backToLogin()" style="width: 100%;">← 返回</button>
             </div>
         </div>
 
@@ -1029,9 +1059,8 @@
             if (savedUser) {
                 currentUser = savedUser;
                 showApp();
-            } else {
-                displayExistingUsers();
             }
+            // 不再自动显示用户列表，等用户选择
         }
 
         // ==================== 用户管理 ====================
@@ -1056,25 +1085,71 @@
             }
         }
 
-        function displayExistingUsers() {
-            const container = document.getElementById('existingUsers');
-            if (usersList.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #999; padding: 10px;">还没有用户，请创建新用户</div>';
+        // 显示老用户登录界面
+        function showOldUserLogin() {
+            // 从云端加载所有用户
+            const allUsers = [...new Set(records.map(r => r.user))];
+
+            // 合并本地用户列表和云端用户
+            const combinedUsers = new Set([...usersList.map(u => u.name), ...allUsers]);
+
+            const container = document.getElementById('oldUsersList');
+
+            if (combinedUsers.size === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有用户<br/>请返回创建新用户</div>';
+            } else {
+                container.innerHTML = Array.from(combinedUsers).map(userName => {
+                    const user = usersList.find(u => u.name === userName);
+                    return `
+                        <div class="user-list-item" onclick="quickLogin('${userName}')">
+                            <div class="user-list-name">${userName}</div>
+                            ${user ? `<div class="user-list-stats">注册于 ${new Date(user.createdAt).toLocaleDateString()}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('loginSection').classList.remove('active');
+            document.getElementById('oldUserSection').classList.add('active');
+        }
+
+        // 显示新用户注册界面
+        function showNewUserRegister() {
+            document.getElementById('loginSection').classList.remove('active');
+            document.getElementById('newUserSection').classList.add('active');
+        }
+
+        // 返回登录选择
+        function backToLogin() {
+            document.getElementById('oldUserSection').classList.remove('active');
+            document.getElementById('newUserSection').classList.remove('active');
+            document.getElementById('loginSection').classList.add('active');
+        }
+
+        // 新用户注册
+        function registerNewUser() {
+            const userName = document.getElementById('newUserName').value.trim();
+            if (!userName) {
+                alert('请输入你的名字');
                 return;
             }
 
-            container.innerHTML = '<label style="display: block; color: #666; margin-bottom: 10px; font-weight: 600;">选择已有用户</label>' +
-                usersList.map(user => `
-                    <div class="user-list-item" onclick="quickLogin('${user.name}')">
-                        <div class="user-list-name">${user.name}</div>
-                        <div class="user-list-stats">注册于 ${new Date(user.createdAt).toLocaleDateString()}</div>
-                    </div>
-                `).join('');
+            // 检查用户名是否已存在
+            if (usersList.find(u => u.name === userName)) {
+                alert('该用户名已存在，请返回选择老用户登录');
+                return;
+            }
+
+            currentUser = userName;
+            localStorage.setItem('currentUser', userName);
+            addUser(userName);
+            showApp();
         }
 
         function quickLogin(userName) {
             currentUser = userName;
             localStorage.setItem('currentUser', userName);
+            addUser(userName); // 确保添加到本地列表
             showApp();
         }
 
@@ -1082,7 +1157,6 @@
             if (confirm('确定要切换用户吗？')) {
                 currentUser = '';
                 localStorage.removeItem('currentUser');
-                document.getElementById('userName').value = '';
 
                 // 隐藏所有section
                 document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1091,27 +1165,14 @@
                 // 重置导航
                 document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
                 document.querySelectorAll('.nav-item')[0].classList.add('active');
-
-                displayExistingUsers();
             }
-        }
-
-        // ==================== 登录 ====================
-        function login() {
-            const userName = document.getElementById('userName').value.trim();
-            if (!userName) {
-                alert('请输入你的名字');
-                return;
-            }
-            currentUser = userName;
-            localStorage.setItem('currentUser', userName);
-            addUser(userName);
-            showApp();
         }
 
         // ==================== 显示应用 ====================
         function showApp() {
             document.getElementById('loginSection').classList.remove('active');
+            document.getElementById('oldUserSection').classList.remove('active');
+            document.getElementById('newUserSection').classList.remove('active');
             document.getElementById('checkinSection').classList.add('active');
             document.getElementById('headerInfo').textContent = `你好，${currentUser}`;
             loadRecords();
