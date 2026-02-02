@@ -1630,9 +1630,12 @@
                     return;
                 }
 
+                console.log('正在从云端加载数据...');
                 const query = Bmob.Query('CheckinRecord');
                 query.limit(1000);
                 const result = await query.find();
+
+                console.log(`从云端加载了 ${result.length} 条打卡记录`);
 
                 records = result.map(item => ({
                     id: item.objectId,
@@ -1645,6 +1648,13 @@
                     isSupplementary: item.get('isSupplementary') || false,
                     timestamp: new Date(item.createdAt).getTime()
                 }));
+
+                // 显示所有用户
+                const allUsers = [...new Set(records.map(r => r.user))];
+                console.log('云端数据包含的用户:', allUsers);
+
+                // 从云端记录中同步用户
+                syncUsersFromRecords();
 
                 // 同步到本地
                 saveToLocal();
@@ -2040,30 +2050,30 @@
             document.getElementById('currentUserStats').textContent =
                 `打卡${myDays}天 | 积分${myTotalPoints}分 | 训练${myTotalDuration}分钟`;
 
-            // 更新所有用户列表
-            const allUsers = [...new Set(records.map(r => r.user))];
-            const usersData = allUsers.map(userName => {
-                const userRecords = records.filter(r => r.user === userName);
+            // 更新所有用户列表 - 显示usersList中的所有用户
+            const usersData = usersList.map(user => {
+                const userRecords = records.filter(r => r.user === user.name);
                 const days = new Set(userRecords.map(r => r.date)).size;
                 const points = userRecords.reduce((sum, r) => sum + r.points, 0);
                 const duration = userRecords.reduce((sum, r) => sum + r.duration, 0);
-                const user = usersList.find(u => u.name === userName);
                 return {
-                    name: userName,
+                    name: user.name,
                     days,
                     points,
                     duration,
-                    displayName: getUserDisplayName(userName),
-                    avatar: user ? user.avatar : '👤',
-                    role: user ? user.role : 'user'
+                    displayName: getUserDisplayName(user.name),
+                    avatar: user.avatar || '👤',
+                    role: user.role || 'user'
                 };
-            }).sort((a, b) => b.points - a.points);
+            }).sort((a, b) => b.points - a.points); // 按积分排序
 
             const container = document.getElementById('allUsersList');
             if (usersData.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有打卡记录</div>';
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有用户</div>';
                 return;
             }
+
+            console.log('用户管理界面显示的用户:', usersData);
 
             container.innerHTML = usersData.map(user => `
                 <div class="user-list-item ${user.name === currentUser ? 'current' : ''}" style="display: flex; align-items: center; gap: 12px;">
