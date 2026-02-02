@@ -1302,15 +1302,86 @@
             restApiKey: '9511b279aa8120af6c878a9873892973'
         };
 
+        // Bmob REST API 封装（不需要 SDK）
+        const BmobAPI = {
+            baseUrl: 'https://api2.bmob.cn/1',
+
+            // 通用请求方法
+            async request(method, path, data = null) {
+                const url = `${this.baseUrl}${path}`;
+                const headers = {
+                    'X-Bmob-Application-Id': BMOB_CONFIG.applicationId,
+                    'X-Bmob-REST-API-Key': BMOB_CONFIG.restApiKey,
+                    'Content-Type': 'application/json'
+                };
+
+                const options = {
+                    method: method,
+                    headers: headers
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error('Bmob API 请求失败:', error);
+                    throw error;
+                }
+            },
+
+            // 查询记录
+            async query(tableName, limit = 1000) {
+                const path = `/classes/${tableName}?limit=${limit}&order=-createdAt`;
+                return await this.request('GET', path);
+            },
+
+            // 创建记录
+            async create(tableName, data) {
+                const path = `/classes/${tableName}`;
+                return await this.request('POST', path, data);
+            },
+
+            // 更新记录
+            async update(tableName, objectId, data) {
+                const path = `/classes/${tableName}/${objectId}`;
+                return await this.request('PUT', path, data);
+            },
+
+            // 删除记录
+            async delete(tableName, objectId) {
+                const path = `/classes/${tableName}/${objectId}`;
+                return await this.request('DELETE', path);
+            }
+        };
+
+        // 设置全局标志
+        window.bmobLoaded = true;
+        console.log('✅ Bmob REST API 已初始化');
+
         // 初始化应用（异步）
         async function initApp() {
             console.log('应用初始化...');
+
+            // 设置云端状态
+            updateCloudStatus('✅ 云端已连接', 'Bmob REST API 模式', 'success');
 
             // 先从本地加载数据（立即显示）
             loadFromLocal();
 
             // 继续原有的初始化流程
             init();
+
+            // 尝试从云端加载
+            if (window.bmobLoaded) {
+                loadRecords();
+            }
         }
 
         // 启动应用
@@ -1476,13 +1547,11 @@
 
             // 尝试从云端加载数据
             try {
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
-                    const query = Bmob.Query('CheckinRecord');
-                    query.limit(1000);
-                    const res = await query.find();
+                if (window.bmobLoaded) {
+                    const res = await BmobAPI.query('CheckinRecord');
 
-                    if (res && res.length > 0) {
-                        const cloudRecords = res.map(item => ({
+                    if (res && res.results && res.results.length > 0) {
+                        const cloudRecords = res.results.map(item => ({
                             user: item.user
                         }));
 
@@ -1834,17 +1903,15 @@
         // 加载记录
         async function loadRecords() {
             try {
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded) {
                     console.log('正在从云端加载数据...');
                     updateCloudStatus('⏳ 加载中', '正在从云端加载数据...', 'loading');
 
-                    // 从 Bmob 加载
-                    const query = Bmob.Query('CheckinRecord');
-                    query.limit(1000); // 加载最多1000条
-                    const res = await query.find();
+                    // 从 Bmob 加载（使用 REST API）
+                    const res = await BmobAPI.query('CheckinRecord');
 
-                    if (res && res.length > 0) {
-                        records = res.map(item => ({
+                    if (res && res.results && res.results.length > 0) {
+                        records = res.results.map(item => ({
                             id: item.objectId,
                             user: item.user,
                             date: item.date,
@@ -2024,27 +2091,29 @@
                 saveToLocal();
 
                 // 保存到云端
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded) {
                     try {
-                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                        const record = new CheckinRecord();
-                        record.set('user', localRecord.user);
-                        record.set('date', localRecord.date);
-                        record.set('count16', localRecord.count16);
-                        record.set('count64', localRecord.count64);
-                        record.set('duration', localRecord.duration);
-                        record.set('points', localRecord.points);
-                        record.set('isSupplementary', localRecord.isSupplementary);
-                        record.set('timestamp', localRecord.timestamp);
+                        const bmobData = {
+                            user: localRecord.user,
+                            date: localRecord.date,
+                            count16: localRecord.count16,
+                            count64: localRecord.count64,
+                            duration: localRecord.duration,
+                            points: localRecord.points,
+                            isSupplementary: localRecord.isSupplementary,
+                            timestamp: localRecord.timestamp
+                        };
 
-                        const res = await record.save();
+                        const res = await BmobAPI.create('CheckinRecord', bmobData);
 
                         // 更新本地记录的 ID
-                        localRecord.id = res.objectId;
-                        const index = records.findIndex(r => r === localRecord);
-                        if (index !== -1) {
-                            records[index] = localRecord;
-                            saveToLocal();
+                        if (res && res.objectId) {
+                            localRecord.id = res.objectId;
+                            const index = records.findIndex(r => r === localRecord);
+                            if (index !== -1) {
+                                records[index] = localRecord;
+                                saveToLocal();
+                            }
                         }
 
                         console.log('✅ 已同步到云端');
@@ -2087,12 +2156,9 @@
                 saveToLocal();
 
                 // 从云端删除
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded) {
                     try {
-                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                        const record = new CheckinRecord();
-                        record.id = id;
-                        await record.destroy();
+                        await BmobAPI.delete('CheckinRecord', id);
                         console.log('✅ 已从云端删除');
                     } catch (error) {
                         console.error('云端删除失败:', error);
@@ -2164,19 +2230,19 @@
                 }
 
                 // 更新云端
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded) {
                     try {
-                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                        const bmobRecord = new CheckinRecord();
-                        bmobRecord.id = editingRecordId;
-                        bmobRecord.set('count16', editCounts[16]);
-                        bmobRecord.set('count64', editCounts[64]);
-                        bmobRecord.set('duration', duration);
-                        bmobRecord.set('points', totalPoints);
-                        await bmobRecord.save();
-                        console.log('✅ 编辑数据已同步到云端');
+                        const updateData = {
+                            count16: editCounts[16],
+                            count64: editCounts[64],
+                            duration: duration,
+                            points: totalPoints
+                        };
+
+                        await BmobAPI.update('CheckinRecord', editingRecordId, updateData);
+                        console.log('✅ 已同步到云端');
                     } catch (error) {
-                        console.error('云端更新失败:', error);
+                        console.error('云端同步失败:', error);
                     }
                 }
 
@@ -2307,27 +2373,29 @@
                 saveToLocal();
 
                 // 保存到云端
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded) {
                     try {
-                        const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                        const record = new CheckinRecord();
-                        record.set('user', localRecord.user);
-                        record.set('date', localRecord.date);
-                        record.set('count16', localRecord.count16);
-                        record.set('count64', localRecord.count64);
-                        record.set('duration', localRecord.duration);
-                        record.set('points', localRecord.points);
-                        record.set('isSupplementary', localRecord.isSupplementary);
-                        record.set('timestamp', localRecord.timestamp);
+                        const bmobData = {
+                            user: localRecord.user,
+                            date: localRecord.date,
+                            count16: localRecord.count16,
+                            count64: localRecord.count64,
+                            duration: localRecord.duration,
+                            points: localRecord.points,
+                            isSupplementary: localRecord.isSupplementary,
+                            timestamp: localRecord.timestamp
+                        };
 
-                        const res = await record.save();
+                        const res = await BmobAPI.create('CheckinRecord', bmobData);
 
                         // 更新本地记录的 ID
-                        localRecord.id = res.objectId;
-                        const index = records.findIndex(r => r === localRecord);
-                        if (index !== -1) {
-                            records[index] = localRecord;
-                            saveToLocal();
+                        if (res && res.objectId) {
+                            localRecord.id = res.objectId;
+                            const index = records.findIndex(r => r === localRecord);
+                            if (index !== -1) {
+                                records[index] = localRecord;
+                                saveToLocal();
+                            }
                         }
 
                         console.log('✅ 补卡数据已同步到云端');
@@ -2566,14 +2634,11 @@
 
             try {
                 // 删除云端该用户的所有记录
-                if (window.bmobLoaded && typeof Bmob !== 'undefined') {
+                if (window.bmobLoaded) {
                     const userRecords = records.filter(r => r.user === userName);
                     for (const record of userRecords) {
                         try {
-                            const CheckinRecord = Bmob.Object.extend('CheckinRecord');
-                            const bmobRecord = new CheckinRecord();
-                            bmobRecord.id = record.id;
-                            await bmobRecord.destroy();
+                            await BmobAPI.delete('CheckinRecord', record.id);
                         } catch (error) {
                             console.error('删除云端记录失败:', error);
                         }
@@ -2917,74 +2982,6 @@
             const date = new Date(timestamp);
             return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         }
-    </script>
-
-    <!-- Bmob SDK 加载 -->
-    <script>
-        // Bmob SDK 加载 - 使用最稳定的 CDN
-        (function loadBmobSDK() {
-            // 尝试按顺序加载多个 CDN 源
-            const cdnList = [
-                'https://cdn.jsdelivr.net/npm/hydrogen-js-sdk@2.3.0/dist/Bmob.min.js',
-                'https://unpkg.com/hydrogen-js-sdk@2.3.0/dist/Bmob.min.js',
-                'https://cdn.staticfile.org/bmob-sdk/2.3.0/Bmob.min.js'
-            ];
-
-            let currentIndex = 0;
-
-            function tryLoadSDK() {
-                if (currentIndex >= cdnList.length) {
-                    console.error('❌ 所有 Bmob CDN 源均加载失败');
-                    updateCloudStatus('❌ Bmob SDK 未加载', '将使用本地模式', 'error');
-                    window.bmobLoaded = false;
-                    return;
-                }
-
-                const script = document.createElement('script');
-                script.src = cdnList[currentIndex];
-
-                script.onload = function() {
-                    console.log('✅ Bmob SDK 加载成功，来源:', cdnList[currentIndex]);
-                    window.bmobLoaded = true;
-
-                    // 初始化 Bmob
-                    if (typeof Bmob !== 'undefined') {
-                        try {
-                            Bmob.initialize(BMOB_CONFIG.applicationId, BMOB_CONFIG.restApiKey);
-                            console.log('✅ Bmob 已初始化');
-                            updateCloudStatus('✅ 云端已连接', 'Bmob 数据同步', 'success');
-
-                            // 加载数据
-                            if (typeof loadRecords === 'function') {
-                                loadRecords();
-                            }
-                        } catch (error) {
-                            console.error('Bmob 初始化失败:', error);
-                            updateCloudStatus('❌ Bmob 初始化失败', '将使用本地模式', 'error');
-                            window.bmobLoaded = false;
-                        }
-                    }
-                };
-
-                script.onerror = function() {
-                    console.warn(`CDN ${currentIndex + 1} 加载失败:`, cdnList[currentIndex]);
-                    currentIndex++;
-                    tryLoadSDK();
-                };
-
-                // 设置 5 秒超时
-                setTimeout(function() {
-                    if (!window.bmobLoaded) {
-                        console.warn(`CDN ${currentIndex + 1} 超时:`, cdnList[currentIndex]);
-                        script.onerror();
-                    }
-                }, 5000);
-
-                document.head.appendChild(script);
-            }
-
-            tryLoadSDK();
-        })();
     </script>
 
 </body>
