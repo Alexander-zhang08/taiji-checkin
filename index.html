@@ -1281,7 +1281,11 @@
         // ==================== 初始化 ====================
         function init() {
             loadUsersList();
-            loadFromLocal(); // 先从本地加载数据
+            loadFromLocal(); // 先从本地加载打卡数据
+
+            // 从打卡记录中提取用户，确保数据打通
+            syncUsersFromRecords();
+
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 currentUser = savedUser;
@@ -1291,6 +1295,38 @@
         }
 
         // ==================== 用户管理 ====================
+        // 从打卡记录中同步用户列表（数据迁移和打通）
+        function syncUsersFromRecords() {
+            if (records.length === 0) return;
+
+            let hasNewUsers = false;
+            const recordUsers = [...new Set(records.map(r => r.user))];
+
+            recordUsers.forEach(userName => {
+                if (!usersList.find(u => u.name === userName)) {
+                    console.log('从打卡记录中发现新用户:', userName);
+                    // 添加用户到用户列表
+                    usersList.push({
+                        name: userName,
+                        nickname: userName,
+                        avatar: avatarList[Math.floor(Math.random() * avatarList.length)],
+                        password: '',
+                        phone: '',
+                        email: '',
+                        bio: '',
+                        role: usersList.length === 0 ? 'admin' : 'user',
+                        lastLogin: '',
+                        createdAt: new Date().toISOString()
+                    });
+                    hasNewUsers = true;
+                }
+            });
+
+            if (hasNewUsers) {
+                console.log('同步了', recordUsers.length, '个用户到用户列表');
+                saveUsersList();
+            }
+        }
         function loadUsersList() {
             const saved = localStorage.getItem('taijiUsers');
             if (saved) {
@@ -1399,6 +1435,9 @@
             } catch (error) {
                 console.warn('加载云端用户失败:', error);
             }
+
+            // 从本地打卡记录中同步用户（确保数据打通）
+            syncUsersFromRecords();
 
             // 显示用户列表
             console.log('用户列表数量:', usersList.length);
