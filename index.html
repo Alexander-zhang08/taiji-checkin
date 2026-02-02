@@ -1021,6 +1021,11 @@
             </div>
 
             <div class="input-group" style="margin-bottom: 15px;">
+                <label>登录密码（选填，不填则无需密码）</label>
+                <input type="password" id="editUserPassword" placeholder="不修改请留空">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 15px;">
                 <label>手机号（选填）</label>
                 <input type="tel" id="editUserPhone" placeholder="请输入手机号" maxlength="11">
             </div>
@@ -1038,6 +1043,23 @@
             <div class="modal-buttons">
                 <button class="modal-btn" style="background: #f5f5f5; color: #666;" onclick="closeEditUserModal()">取消</button>
                 <button class="modal-btn" style="background: #4CAF50; color: white;" onclick="saveUserInfo()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 密码验证模态框 -->
+    <div class="modal" id="passwordModal">
+        <div class="modal-content">
+            <div class="modal-title">🔐 输入密码</div>
+
+            <div class="input-group" style="margin: 20px 0;">
+                <label id="passwordUserLabel">用户需要密码登录</label>
+                <input type="password" id="loginPassword" placeholder="请输入密码">
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn" style="background: #f5f5f5; color: #666;" onclick="closePasswordModal()">取消</button>
+                <button class="modal-btn" style="background: #4CAF50; color: white;" onclick="verifyPassword()">登录</button>
             </div>
         </div>
     </div>
@@ -1112,6 +1134,7 @@
             if (!usersList.find(u => u.name === userName)) {
                 usersList.push({
                     name: userName,
+                    password: '', // 默认无密码
                     phone: '',
                     email: '',
                     bio: '',
@@ -1204,10 +1227,52 @@
         }
 
         function quickLogin(userName) {
-            currentUser = userName;
-            localStorage.setItem('currentUser', userName);
-            addUser(userName); // 确保添加到本地列表
-            showApp();
+            const user = usersList.find(u => u.name === userName);
+
+            // 检查用户是否设置了密码
+            if (user && user.password) {
+                // 需要密码验证
+                window.pendingLoginUser = userName;
+                document.getElementById('passwordUserLabel').textContent = `${userName} 需要密码登录`;
+                document.getElementById('loginPassword').value = '';
+                document.getElementById('passwordModal').classList.add('active');
+            } else {
+                // 无需密码，直接登录
+                currentUser = userName;
+                localStorage.setItem('currentUser', userName);
+                addUser(userName); // 确保添加到本地列表
+                showApp();
+            }
+        }
+
+        // 关闭密码验证模态框
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('active');
+            document.getElementById('loginPassword').value = '';
+            window.pendingLoginUser = null;
+        }
+
+        // 验证密码
+        function verifyPassword() {
+            const userName = window.pendingLoginUser;
+            const password = document.getElementById('loginPassword').value;
+            const user = usersList.find(u => u.name === userName);
+
+            if (!user) {
+                alert('用户不存在');
+                return;
+            }
+
+            if (password === user.password) {
+                // 密码正确
+                closePasswordModal();
+                currentUser = userName;
+                localStorage.setItem('currentUser', userName);
+                showApp();
+            } else {
+                alert('密码错误，请重试');
+                document.getElementById('loginPassword').value = '';
+            }
         }
 
         function switchUser() {
@@ -1728,6 +1793,7 @@
 
             // 填充表单
             document.getElementById('editUserName').value = user.name;
+            document.getElementById('editUserPassword').value = ''; // 密码不显示
             document.getElementById('editUserPhone').value = user.phone || '';
             document.getElementById('editUserEmail').value = user.email || '';
             document.getElementById('editUserBio').value = user.bio || '';
@@ -1741,6 +1807,7 @@
         // 关闭用户编辑模态框
         function closeEditUserModal() {
             document.getElementById('editUserModal').classList.remove('active');
+            document.getElementById('editUserPassword').value = '';
             window.editingUserName = null;
         }
 
@@ -1748,6 +1815,7 @@
         function saveUserInfo() {
             const oldName = window.editingUserName;
             const newName = document.getElementById('editUserName').value.trim();
+            const newPassword = document.getElementById('editUserPassword').value.trim();
             const phone = document.getElementById('editUserPhone').value.trim();
             const email = document.getElementById('editUserEmail').value.trim();
             const bio = document.getElementById('editUserBio').value.trim();
@@ -1774,6 +1842,11 @@
             user.phone = phone;
             user.email = email;
             user.bio = bio;
+
+            // 如果输入了新密码，则更新密码；否则保持原密码
+            if (newPassword) {
+                user.password = newPassword;
+            }
 
             // 如果用户名改变，需要更新所有相关记录
             if (newName !== oldName) {
