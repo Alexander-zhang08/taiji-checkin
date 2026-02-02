@@ -1295,6 +1295,39 @@
             const saved = localStorage.getItem('taijiUsers');
             if (saved) {
                 usersList = JSON.parse(saved);
+
+                // 补全旧用户数据的缺失字段
+                let needUpdate = false;
+                usersList.forEach(user => {
+                    if (!user.nickname) {
+                        user.nickname = user.name;
+                        needUpdate = true;
+                    }
+                    if (!user.avatar) {
+                        user.avatar = avatarList[Math.floor(Math.random() * avatarList.length)];
+                        needUpdate = true;
+                    }
+                    if (user.role === undefined) {
+                        user.role = 'user';
+                        needUpdate = true;
+                    }
+                    if (!user.lastLogin) {
+                        user.lastLogin = '';
+                        needUpdate = true;
+                    }
+                    if (user.password === undefined) {
+                        user.password = '';
+                        needUpdate = true;
+                    }
+                    if (!user.phone) user.phone = '';
+                    if (!user.email) user.email = '';
+                    if (!user.bio) user.bio = '';
+                });
+
+                // 如果有更新，保存回本地
+                if (needUpdate) {
+                    saveUsersList();
+                }
             }
         }
 
@@ -1322,6 +1355,9 @@
 
         // 显示老用户登录界面
         async function showOldUserLogin() {
+            // 先加载本地用户列表
+            loadUsersList();
+
             // 切换到老用户界面
             document.getElementById('loginSection').classList.remove('active');
             document.getElementById('oldUserSection').classList.add('active');
@@ -1346,6 +1382,14 @@
                         if (!usersList.find(u => u.name === userName)) {
                             usersList.push({
                                 name: userName,
+                                nickname: userName, // 昵称默认等于用户名
+                                avatar: avatarList[Math.floor(Math.random() * avatarList.length)], // 随机头像
+                                password: '', // 默认无密码
+                                phone: '',
+                                email: '',
+                                bio: '',
+                                role: 'user', // 云端导入的用户默认为普通用户
+                                lastLogin: '',
                                 createdAt: new Date().toISOString()
                             });
                         }
@@ -1357,11 +1401,14 @@
             }
 
             // 显示用户列表
+            console.log('用户列表数量:', usersList.length);
+            console.log('用户列表:', usersList);
+
             if (usersList.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有用户<br/>请返回创建新用户</div>';
             } else {
                 container.innerHTML = usersList.map(user => `
-                    <div class="user-list-item" onclick="quickLogin('${user.name}')" style="display: flex; align-items: center; gap: 12px;">
+                    <div class="user-list-item" onclick="quickLogin('${user.name}')" style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
                         <div style="font-size: 32px;">${user.avatar || '👤'}</div>
                         <div style="flex: 1;">
                             <div class="user-list-name">${user.nickname || user.name}</div>
