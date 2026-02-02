@@ -1039,7 +1039,16 @@
                 <button class="btn btn-secondary" onclick="switchUser()" style="margin-top: 15px; width: 100%;">🔄 切换用户</button>
             </div>
 
-            <div class="card">
+            <!-- 云端数据状态 -->
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-title">☁️ 云端数据状态</div>
+                <div id="cloudStatus" style="padding: 15px; background: #f5f5f5; border-radius: 10px; font-size: 13px; line-height: 1.6;">
+                    <div>正在检查...</div>
+                </div>
+                <button class="btn btn-primary" onclick="loadRecords()" style="margin-top: 10px; width: 100%;">🔄 刷新云端数据</button>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
                 <div class="card-title">👥 所有用户</div>
                 <div id="allUsersList"></div>
             </div>
@@ -1625,12 +1634,15 @@
                 // 检查Bmob是否可用
                 if (typeof Bmob === 'undefined') {
                     console.warn('Bmob不可用，从本地加载数据');
+                    updateCloudStatus('❌ Bmob SDK 未加载', 'Bmob SDK 未正确加载，只能使用本地数据。', 'error');
                     loadFromLocal();
                     updateUI();
                     return;
                 }
 
                 console.log('正在从云端加载数据...');
+                updateCloudStatus('⏳ 加载中', '正在从云端加载数据...', 'loading');
+
                 const query = Bmob.Query('CheckinRecord');
                 query.limit(1000);
                 const result = await query.find();
@@ -1653,6 +1665,14 @@
                 const allUsers = [...new Set(records.map(r => r.user))];
                 console.log('云端数据包含的用户:', allUsers);
 
+                // 更新云端状态显示
+                updateCloudStatus(
+                    '✅ 云端同步成功',
+                    `共加载 ${result.length} 条打卡记录<br>` +
+                    `包含 ${allUsers.length} 个用户: ${allUsers.join(', ')}`,
+                    'success'
+                );
+
                 // 从云端记录中同步用户
                 syncUsersFromRecords();
 
@@ -1661,10 +1681,42 @@
                 updateUI();
             } catch (error) {
                 console.error('加载数据失败:', error);
+                updateCloudStatus(
+                    '⚠️ 云端加载失败',
+                    `错误信息: ${error.message || '未知错误'}<br>将使用本地缓存数据`,
+                    'error'
+                );
                 // 加载失败时从本地读取
                 loadFromLocal();
                 updateUI();
             }
+        }
+
+        // 更新云端状态显示
+        function updateCloudStatus(title, message, type) {
+            const container = document.getElementById('cloudStatus');
+            if (!container) return;
+
+            let bgColor = '#f5f5f5';
+            let textColor = '#333';
+
+            if (type === 'success') {
+                bgColor = '#e8f5e9';
+                textColor = '#2e7d32';
+            } else if (type === 'error') {
+                bgColor = '#ffebee';
+                textColor = '#c62828';
+            } else if (type === 'loading') {
+                bgColor = '#fff3e0';
+                textColor = '#e65100';
+            }
+
+            container.style.background = bgColor;
+            container.style.color = textColor;
+            container.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">${title}</div>
+                <div>${message}</div>
+            `;
         }
 
         // 提交打卡
