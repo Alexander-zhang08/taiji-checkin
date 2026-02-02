@@ -1016,8 +1016,20 @@
             <div class="modal-title">✏️ 编辑用户信息</div>
 
             <div class="input-group" style="margin-bottom: 15px;">
-                <label>用户名</label>
+                <label>头像</label>
+                <div id="avatarSelector" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 8px;">
+                    <!-- 头像选择器会动态生成 -->
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-bottom: 15px;">
+                <label>用户名（登录用）</label>
                 <input type="text" id="editUserName" placeholder="请输入用户名" maxlength="10">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 15px;">
+                <label>昵称（显示用）</label>
+                <input type="text" id="editUserNickname" placeholder="请输入昵称" maxlength="10">
             </div>
 
             <div class="input-group" style="margin-bottom: 15px;">
@@ -1103,6 +1115,9 @@
         // 用户列表
         let usersList = [];
 
+        // 可选头像列表
+        const avatarList = ['🥋', '👤', '🧘', '🤸', '🏃', '💪', '⚡', '🔥', '🌟', '🎯', '🦁', '🐯', '🦅', '🐉', '🌊', '⛰️'];
+
         // 自动刷新定时器
         let refreshTimer = null;
 
@@ -1134,10 +1149,14 @@
             if (!usersList.find(u => u.name === userName)) {
                 usersList.push({
                     name: userName,
+                    nickname: userName, // 昵称默认等于用户名
+                    avatar: avatarList[Math.floor(Math.random() * avatarList.length)], // 随机头像
                     password: '', // 默认无密码
                     phone: '',
                     email: '',
                     bio: '',
+                    role: usersList.length === 0 ? 'admin' : 'user', // 第一个用户是管理员
+                    lastLogin: new Date().toISOString(),
                     createdAt: new Date().toISOString()
                 });
                 saveUsersList();
@@ -1185,9 +1204,16 @@
                 container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">还没有用户<br/>请返回创建新用户</div>';
             } else {
                 container.innerHTML = usersList.map(user => `
-                    <div class="user-list-item" onclick="quickLogin('${user.name}')">
-                        <div class="user-list-name">${user.name}</div>
-                        <div class="user-list-stats">注册于 ${new Date(user.createdAt).toLocaleDateString()}</div>
+                    <div class="user-list-item" onclick="quickLogin('${user.name}')" style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 32px;">${user.avatar || '👤'}</div>
+                        <div style="flex: 1;">
+                            <div class="user-list-name">${user.nickname || user.name}</div>
+                            <div class="user-list-stats">
+                                ${user.role === 'admin' ? '👑 管理员 | ' : ''}
+                                注册于 ${new Date(user.createdAt).toLocaleDateString()}
+                                ${user.password ? ' | 🔐' : ''}
+                            </div>
+                        </div>
                     </div>
                 `).join('');
             }
@@ -1233,7 +1259,7 @@
             if (user && user.password) {
                 // 需要密码验证
                 window.pendingLoginUser = userName;
-                document.getElementById('passwordUserLabel').textContent = `${userName} 需要密码登录`;
+                document.getElementById('passwordUserLabel').textContent = `${user.nickname || userName} 需要密码登录`;
                 document.getElementById('loginPassword').value = '';
                 document.getElementById('passwordModal').classList.add('active');
             } else {
@@ -1241,6 +1267,13 @@
                 currentUser = userName;
                 localStorage.setItem('currentUser', userName);
                 addUser(userName); // 确保添加到本地列表
+
+                // 更新最后登录时间
+                if (user) {
+                    user.lastLogin = new Date().toISOString();
+                    saveUsersList();
+                }
+
                 showApp();
             }
         }
@@ -1268,6 +1301,11 @@
                 closePasswordModal();
                 currentUser = userName;
                 localStorage.setItem('currentUser', userName);
+
+                // 更新最后登录时间
+                user.lastLogin = new Date().toISOString();
+                saveUsersList();
+
                 showApp();
             } else {
                 alert('密码错误，请重试');
@@ -1294,12 +1332,22 @@
         }
 
         // ==================== 显示应用 ====================
+        // 获取用户显示名称（优先显示昵称）
+        function getUserDisplayName(userName) {
+            const user = usersList.find(u => u.name === userName);
+            return user && user.nickname ? user.nickname : userName;
+        }
+
         function showApp() {
             document.getElementById('loginSection').classList.remove('active');
             document.getElementById('oldUserSection').classList.remove('active');
             document.getElementById('newUserSection').classList.remove('active');
             document.getElementById('checkinSection').classList.add('active');
-            document.getElementById('headerInfo').textContent = `你好，${currentUser}`;
+
+            // 显示昵称而不是用户名
+            const user = usersList.find(u => u.name === currentUser);
+            const displayName = user && user.nickname ? user.nickname : currentUser;
+            document.getElementById('headerInfo').textContent = `你好，${displayName}`;
 
             // 显示底部导航
             document.getElementById('bottomNav').style.display = 'flex';
@@ -1740,7 +1788,10 @@
             const myTotalPoints = myRecords.reduce((sum, r) => sum + r.points, 0);
             const myTotalDuration = myRecords.reduce((sum, r) => sum + r.duration, 0);
 
-            document.getElementById('currentUserName').textContent = currentUser;
+            const currentUserObj = usersList.find(u => u.name === currentUser);
+            const currentDisplayName = getUserDisplayName(currentUser);
+            document.getElementById('currentUserName').textContent =
+                `${currentUserObj && currentUserObj.avatar ? currentUserObj.avatar + ' ' : ''}${currentDisplayName}`;
             document.getElementById('currentUserStats').textContent =
                 `打卡${myDays}天 | 积分${myTotalPoints}分 | 训练${myTotalDuration}分钟`;
 
@@ -1751,7 +1802,16 @@
                 const days = new Set(userRecords.map(r => r.date)).size;
                 const points = userRecords.reduce((sum, r) => sum + r.points, 0);
                 const duration = userRecords.reduce((sum, r) => sum + r.duration, 0);
-                return { name: userName, days, points, duration };
+                const user = usersList.find(u => u.name === userName);
+                return {
+                    name: userName,
+                    days,
+                    points,
+                    duration,
+                    displayName: getUserDisplayName(userName),
+                    avatar: user ? user.avatar : '👤',
+                    role: user ? user.role : 'user'
+                };
             }).sort((a, b) => b.points - a.points);
 
             const container = document.getElementById('allUsersList');
@@ -1761,9 +1821,14 @@
             }
 
             container.innerHTML = usersData.map(user => `
-                <div class="user-list-item ${user.name === currentUser ? 'current' : ''}">
+                <div class="user-list-item ${user.name === currentUser ? 'current' : ''}" style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 32px;">${user.avatar}</div>
                     <div onclick="showUserDetail('${user.name}')" style="flex: 1;">
-                        <div class="user-list-name">${user.name}</div>
+                        <div class="user-list-name">
+                            ${user.displayName}
+                            ${user.role === 'admin' ? ' 👑' : ''}
+                            ${user.name === currentUser ? ' (我)' : ''}
+                        </div>
                         <div class="user-list-stats">
                             打卡${user.days}天 | 积分${user.points}分 | 训练${user.duration}分钟
                         </div>
@@ -1779,13 +1844,16 @@
         function showUserDetail(userName) {
             if (userName !== currentUser) {
                 const user = usersList.find(u => u.name === userName);
+                const displayName = getUserDisplayName(userName);
                 const userInfo = user ?
-                    `用户：${userName}\n` +
+                    `${user.avatar || '👤'} ${displayName}\n` +
+                    `用户名：${userName}\n` +
+                    (user.role === 'admin' ? `角色：管理员 👑\n` : '') +
                     (user.phone ? `手机：${user.phone}\n` : '') +
                     (user.email ? `邮箱：${user.email}\n` : '') +
                     (user.bio ? `简介：${user.bio}\n` : '') +
                     `\n查看详细数据请切换到该用户` :
-                    `用户：${userName}\n\n查看详细数据请切换到该用户`;
+                    `${displayName}\n\n查看详细数据请切换到该用户`;
                 alert(userInfo);
             }
         }
@@ -1800,13 +1868,25 @@
 
             // 填充表单
             document.getElementById('editUserName').value = user.name;
+            document.getElementById('editUserNickname').value = user.nickname || user.name;
             document.getElementById('editUserPassword').value = ''; // 密码不显示
             document.getElementById('editUserPhone').value = user.phone || '';
             document.getElementById('editUserEmail').value = user.email || '';
             document.getElementById('editUserBio').value = user.bio || '';
 
+            // 渲染头像选择器
+            const avatarSelector = document.getElementById('avatarSelector');
+            avatarSelector.innerHTML = avatarList.map(avatar => `
+                <div style="font-size: 32px; cursor: pointer; padding: 8px; border-radius: 8px; text-align: center; transition: all 0.2s; ${user.avatar === avatar ? 'background: #4CAF50; transform: scale(1.1);' : 'background: #f5f5f5;'}"
+                     onclick="selectAvatar('${avatar}', this)"
+                     data-avatar="${avatar}">
+                    ${avatar}
+                </div>
+            `).join('');
+
             // 保存原用户名（用于更新）
             window.editingUserName = user.name;
+            window.selectedAvatar = user.avatar || '👤';
 
             document.getElementById('editUserModal').classList.add('active');
         }
@@ -1816,12 +1896,31 @@
             document.getElementById('editUserModal').classList.remove('active');
             document.getElementById('editUserPassword').value = '';
             window.editingUserName = null;
+            window.selectedAvatar = null;
+        }
+
+        // 选择头像
+        function selectAvatar(avatar, element) {
+            window.selectedAvatar = avatar;
+
+            // 更新所有头像的样式
+            const allAvatars = element.parentElement.children;
+            for (let i = 0; i < allAvatars.length; i++) {
+                const item = allAvatars[i];
+                item.style.background = '#f5f5f5';
+                item.style.transform = 'scale(1)';
+            }
+
+            // 高亮选中的头像
+            element.style.background = '#4CAF50';
+            element.style.transform = 'scale(1.1)';
         }
 
         // 保存用户信息
         function saveUserInfo() {
             const oldName = window.editingUserName;
             const newName = document.getElementById('editUserName').value.trim();
+            const newNickname = document.getElementById('editUserNickname').value.trim();
             const newPassword = document.getElementById('editUserPassword').value.trim();
             const phone = document.getElementById('editUserPhone').value.trim();
             const email = document.getElementById('editUserEmail').value.trim();
@@ -1829,6 +1928,11 @@
 
             if (!newName) {
                 alert('请输入用户名');
+                return;
+            }
+
+            if (!newNickname) {
+                alert('请输入昵称');
                 return;
             }
 
@@ -1846,6 +1950,8 @@
 
             // 更新用户信息
             user.name = newName;
+            user.nickname = newNickname;
+            user.avatar = window.selectedAvatar || user.avatar || '👤';
             user.phone = phone;
             user.email = email;
             user.bio = bio;
@@ -2123,11 +2229,12 @@
                 ? pointsRanking.map((item, index) => {
                     const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
                     const rankText = index + 1;
+                    const displayName = getUserDisplayName(item.user);
                     return `
                         <div class="ranking-item">
                             <div class="rank-badge ${rankClass}">${rankText}</div>
                             <div class="ranking-info">
-                                <div class="ranking-name">${item.user}${item.user === currentUser ? ' (我)' : ''}</div>
+                                <div class="ranking-name">${displayName}${item.user === currentUser ? ' (我)' : ''}</div>
                                 <div class="ranking-detail">总积分: ${item.points}</div>
                             </div>
                         </div>
@@ -2158,11 +2265,12 @@
                 ? attendanceRanking.map((item, index) => {
                     const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
                     const rankText = index + 1;
+                    const displayName = getUserDisplayName(item.user);
                     return `
                         <div class="ranking-item">
                             <div class="rank-badge ${rankClass}">${rankText}</div>
                             <div class="ranking-info">
-                                <div class="ranking-name">${item.user}${item.user === currentUser ? ' (我)' : ''}</div>
+                                <div class="ranking-name">${displayName}${item.user === currentUser ? ' (我)' : ''}</div>
                                 <div class="ranking-detail">出勤天数: ${item.attendance}</div>
                             </div>
                         </div>
@@ -2187,11 +2295,12 @@
                 ? durationRanking.map((item, index) => {
                     const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
                     const rankText = index + 1;
+                    const displayName = getUserDisplayName(item.user);
                     return `
                         <div class="ranking-item">
                             <div class="rank-badge ${rankClass}">${rankText}</div>
                             <div class="ranking-info">
-                                <div class="ranking-name">${item.user}${item.user === currentUser ? ' (我)' : ''}</div>
+                                <div class="ranking-name">${displayName}${item.user === currentUser ? ' (我)' : ''}</div>
                                 <div class="ranking-detail">训练时长: ${item.duration}分钟</div>
                             </div>
                         </div>
