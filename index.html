@@ -3375,12 +3375,49 @@
         let postsList = [];
 
         // 加载帖子数据
-        function loadPosts() {
+        async function loadPosts() {
+            try {
+                if (window.bmobLoaded) {
+                    // 从 Bmob 云端加载
+                    const res = await BmobAPI.query('CulturePost');
+
+                    if (res && res.results && res.results.length > 0) {
+                        postsList = res.results.map(item => ({
+                            id: item.objectId,
+                            title: item.title,
+                            content: item.content,
+                            image: item.image || '',
+                            author: item.author,
+                            createdAt: item.createdAt,
+                            updatedAt: item.updatedAt || item.createdAt
+                        }));
+
+                        // 保存到本地备份
+                        savePosts();
+                        console.log(`从云端加载 ${postsList.length} 篇帖子`);
+                    } else {
+                        // 云端没有数据，从本地加载
+                        loadFromLocal();
+                    }
+                } else {
+                    // Bmob 不可用，从本地加载
+                    loadFromLocal();
+                }
+            } catch (error) {
+                console.error('从云端加载帖子失败:', error);
+                loadFromLocal();
+            }
+
+            renderPosts();
+        }
+
+        // 从本地加载帖子
+        function loadFromLocal() {
             const saved = localStorage.getItem('taijiPosts');
             if (saved) {
                 postsList = JSON.parse(saved);
+                console.log(`从本地加载 ${postsList.length} 篇帖子`);
             }
-            renderPosts();
         }
 
         // 保存帖子数据
@@ -3490,7 +3527,7 @@
         }
 
         // 提交帖子
-        function submitPost() {
+        async function submitPost() {
             const title = document.getElementById('postTitle').value.trim();
             const content = document.getElementById('postContent').value.trim();
             const imageElement = document.getElementById('previewImg');
@@ -3515,11 +3552,37 @@
                 createdAt: new Date().toISOString()
             };
 
+            // 先添加到本地
             postsList.unshift(newPost);
             savePosts();
             renderPosts();
-            closePostForm();
 
+            // 同步到云端
+            if (window.bmobLoaded) {
+                try {
+                    const bmobData = {
+                        title: title,
+                        content: content,
+                        image: image,
+                        author: currentUser || '匿名'
+                    };
+
+                    const res = await BmobAPI.create('CulturePost', bmobData);
+
+                    if (res && res.objectId) {
+                        // 更新本地记录的 ID 为云端 ID
+                        newPost.id = res.objectId;
+                        newPost.createdAt = res.createdAt;
+                        savePosts();
+                        console.log('✅ 帖子已同步到云端');
+                    }
+                } catch (error) {
+                    console.error('云端同步失败:', error);
+                    alert('⚠️ 帖子已保存到本地，但云端同步失败');
+                }
+            }
+
+            closePostForm();
             alert('✅ 发布成功！');
         }
 
@@ -3609,7 +3672,7 @@
         }
 
         // 更新帖子
-        function updatePost(id) {
+        async function updatePost(id) {
             const title = document.getElementById('postTitle').value.trim();
             const content = document.getElementById('postContent').value.trim();
             const imageElement = document.getElementById('previewImg');
@@ -3634,14 +3697,31 @@
 
                 savePosts();
                 renderPosts();
-                closePostForm();
 
+                // 同步到云端
+                if (window.bmobLoaded) {
+                    try {
+                        const updateData = {
+                            title: title,
+                            content: content,
+                            image: image
+                        };
+
+                        await BmobAPI.update('CulturePost', id, updateData);
+                        console.log('✅ 帖子更新已同步到云端');
+                    } catch (error) {
+                        console.error('云端同步失败:', error);
+                        alert('⚠️ 帖子已更新到本地，但云端同步失败');
+                    }
+                }
+
+                closePostForm();
                 alert('✅ 保存成功！');
             }
         }
 
         // 删除帖子
-        function deletePost(id) {
+        async function deletePost(id) {
             if (!confirm('确定要删除这篇帖子吗？')) {
                 return;
             }
@@ -3650,6 +3730,16 @@
             savePosts();
             renderPosts();
             closePostDetail();
+
+            // 从云端删除
+            if (window.bmobLoaded) {
+                try {
+                    await BmobAPI.delete('CulturePost', id);
+                    console.log('✅ 帖子已从云端删除');
+                } catch (error) {
+                    console.error('云端删除失败:', error);
+                }
+            }
 
             alert('✅ 删除成功！');
         }
