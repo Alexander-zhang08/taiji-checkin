@@ -1668,6 +1668,41 @@
             async delete(tableName, objectId) {
                 const path = `/classes/${tableName}/${objectId}`;
                 return await this.request('DELETE', path);
+            },
+
+            // 上传文件（Base64）
+            async uploadFile(fileName, base64Data) {
+                const url = `${this.baseUrl}/files/${fileName}`;
+                const headers = {
+                    'X-Bmob-Application-Id': BMOB_CONFIG.applicationId,
+                    'X-Bmob-REST-API-Key': BMOB_CONFIG.restApiKey,
+                    'Content-Type': 'text/plain'
+                };
+
+                // 移除 Base64 前缀 (data:image/jpeg;base64,)
+                const base64String = base64Data.split(',')[1];
+
+                const options = {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        filename: fileName,
+                        fileContent: base64String
+                    })
+                };
+
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    const result = await response.json();
+                    console.log('文件上传成功:', result);
+                    return result; // 返回 { filename, url }
+                } catch (error) {
+                    console.error('Bmob 文件上传失败:', error);
+                    throw error;
+                }
             }
         };
 
@@ -3630,16 +3665,32 @@
             // 同步到云端
             if (window.bmobLoaded) {
                 try {
+                    let imageUrl = '';
+
+                    // 如果有图片，先上传图片文件
+                    if (image && image.startsWith('data:image')) {
+                        console.log('正在上传图片到 Bmob...');
+                        const fileName = `culture_${Date.now()}.jpg`;
+                        const uploadResult = await BmobAPI.uploadFile(fileName, image);
+
+                        if (uploadResult && uploadResult.url) {
+                            imageUrl = uploadResult.url;
+                            console.log('✅ 图片上传成功，URL:', imageUrl);
+
+                            // 更新本地记录使用云端图片 URL
+                            newPost.image = imageUrl;
+                            savePosts();
+                            renderPosts();
+                        }
+                    }
+
+                    // 创建帖子记录（使用图片 URL 而不是 Base64）
                     const bmobData = {
                         title: title,
                         content: content,
-                        image: image,
+                        image: imageUrl,
                         author: currentUser || '匿名'
                     };
-
-                    // 显示数据大小
-                    const dataSize = (JSON.stringify(bmobData).length / 1024).toFixed(1);
-                    console.log(`准备上传数据大小: ${dataSize}KB`);
 
                     const res = await BmobAPI.create('CulturePost', bmobData);
 
@@ -3780,10 +3831,29 @@
                 // 同步到云端
                 if (window.bmobLoaded) {
                     try {
+                        let imageUrl = image;
+
+                        // 如果是新上传的图片（Base64），先上传文件
+                        if (image && image.startsWith('data:image')) {
+                            console.log('正在上传图片到 Bmob...');
+                            const fileName = `culture_${Date.now()}.jpg`;
+                            const uploadResult = await BmobAPI.uploadFile(fileName, image);
+
+                            if (uploadResult && uploadResult.url) {
+                                imageUrl = uploadResult.url;
+                                console.log('✅ 图片上传成功，URL:', imageUrl);
+
+                                // 更新本地记录使用云端图片 URL
+                                post.image = imageUrl;
+                                savePosts();
+                                renderPosts();
+                            }
+                        }
+
                         const updateData = {
                             title: title,
                             content: content,
-                            image: image
+                            image: imageUrl
                         };
 
                         await BmobAPI.update('CulturePost', id, updateData);
