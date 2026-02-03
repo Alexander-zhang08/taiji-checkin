@@ -3572,16 +3572,19 @@
             // 绘制图片
             ctx.drawImage(img, 0, 0, width, height);
 
-            // 压缩质量（0.8 = 80% 质量，肉眼难以察觉差异）
-            let quality = 0.8;
+            // 压缩质量（0.7 = 70% 质量，适合网络传输）
+            let quality = 0.7;
             let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
 
-            // 如果压缩后仍然超过 500KB，继续降低质量
-            const MAX_SIZE_KB = 500;
-            while (compressedDataUrl.length * 0.75 / 1024 > MAX_SIZE_KB && quality > 0.3) {
-                quality -= 0.1;
+            // 如果压缩后仍然超过 200KB，继续降低质量（更保守的策略）
+            const MAX_SIZE_KB = 200;
+            while (compressedDataUrl.length * 0.75 / 1024 > MAX_SIZE_KB && quality > 0.2) {
+                quality -= 0.05;
                 compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
             }
+
+            // 在控制台显示最终质量
+            console.log(`图片压缩质量: ${(quality * 100).toFixed(0)}%`);
 
             return compressedDataUrl;
         }
@@ -3634,6 +3637,10 @@
                         author: currentUser || '匿名'
                     };
 
+                    // 显示数据大小
+                    const dataSize = (JSON.stringify(bmobData).length / 1024).toFixed(1);
+                    console.log(`准备上传数据大小: ${dataSize}KB`);
+
                     const res = await BmobAPI.create('CulturePost', bmobData);
 
                     if (res && res.objectId) {
@@ -3641,11 +3648,16 @@
                         newPost.id = res.objectId;
                         newPost.createdAt = res.createdAt;
                         savePosts();
-                        console.log('✅ 帖子已同步到云端');
+                        console.log('✅ 帖子已同步到云端，ID:', res.objectId);
                     }
                 } catch (error) {
-                    console.error('云端同步失败:', error);
-                    alert('⚠️ 帖子已保存到本地，但云端同步失败');
+                    console.error('云端同步失败详情:', error);
+                    console.error('错误类型:', error.name);
+                    console.error('错误信息:', error.message);
+                    if (error.response) {
+                        console.error('服务器响应:', error.response);
+                    }
+                    alert('⚠️ 帖子已保存到本地，但云端同步失败\n\n请按F12查看控制台了解详情');
                 }
             }
 
